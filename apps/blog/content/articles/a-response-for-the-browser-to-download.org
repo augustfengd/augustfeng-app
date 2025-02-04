@@ -1,0 +1,36 @@
+#+title: A response for the browser to download
+#+categories: dotnet
+#+date: [2025-02-03 Mon]
+
+* About
+
+This is just a simple response that will trigger the browser to download
+something.
+
+* Code
+
+#+begin_src fsharp
+open Microsoft.AspNetCore.Builder
+open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Hosting
+open Giraffe
+
+let handler : HttpHandler =
+    fun (_ : HttpFunc) (context : HttpContext) -> task {
+        context.SetHttpHeader("Content-Disposition","attachment; filename=\"foobar.txt\"")
+        let bytes = "helloworld" |> System.Text.Encoding.UTF8.GetBytes
+        return! context.WriteBytesAsync(bytes)
+    }
+
+[<EntryPoint>]
+let main args =
+    let builder = WebApplication.CreateBuilder(args)
+    builder.Services.AddGiraffe() |> ignore
+
+    let app = builder.Build()
+    app.UseGiraffe(handler)
+
+    app.Run()
+
+    0
+#+end_src
