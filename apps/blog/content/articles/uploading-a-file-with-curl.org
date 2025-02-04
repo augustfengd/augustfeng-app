@@ -160,10 +160,11 @@ helloworld
 
 The ~--form~ flag adds meaning to the ~@~ and ~<~ when it prefixes the file.
 
-The ~@~ sign tells cURL to consider the file as a binary.
+The ~@~ sign tells cURL to consider the file as a binary and includes the
+filename in the *Content-Type* field line.
 
 #+begin_src shell
-  curl --form foobar=@foobar http://localhost:1234
+  curl --form foo=@foobar http://localhost:1234
 #+end_src
 
 #+begin_src text
@@ -171,26 +172,29 @@ POST / HTTP/1.1
 Host: localhost:1234
 User-Agent: curl/8.7.1
 Accept: */*
-Content-Length: 226
-Content-Type: multipart/form-data; boundary=------------------------3hamUzHq7nHNPqKS1edqyW
+Content-Length: 223
+Content-Type: multipart/form-data; boundary=------------------------T6bqePJBQp4FoNvv1De6Lw
 
---------------------------3hamUzHq7nHNPqKS1edqyW
-Content-Disposition: form-data; name="foobar"; filename="foobar"
+--------------------------T6bqePJBQp4FoNvv1De6Lw
+Content-Disposition: form-data; name="foo"; filename="foobar"
 Content-Type: application/octet-stream
 
 hello
 world
 .
 
---------------------------3hamUzHq7nHNPqKS1edqyW--
+--------------------------T6bqePJBQp4FoNvv1De6Lw--
 #+end_src
 
 The ~<~ sign tells curl to consider the file as a text and retrieves its
-content. Be sure to to quote the ~<name=content>~ to escape the ~<~ sign from
+content. You will see that there's no ~filename~ in the ~Content-Type~ field
+line.
+
+Hint: Be sure to to quote the ~<name=content>~ to escape the ~<~ sign from
 the shell.
 
 #+begin_src shell
-  curl --form "foobar=<foobar" http://localhost:1234
+  curl --form "foo=<foobar" http://localhost:1234
 #+end_src
 
 #+begin_src text
@@ -198,15 +202,15 @@ POST / HTTP/1.1
 Host: localhost:1234
 User-Agent: curl/8.7.1
 Accept: */*
-Content-Length: 167
-Content-Type: multipart/form-data; boundary=------------------------q42MEsy9pgWREqXRA7A8ud
+Content-Length: 164
+Content-Type: multipart/form-data; boundary=------------------------RxN8nUhV7pI3nC0pLRgjSi
 
---------------------------q42MEsy9pgWREqXRA7A8ud
-Content-Disposition: form-data; name="foobar"
+--------------------------RxN8nUhV7pI3nC0pLRgjSi
+Content-Disposition: form-data; name="foo"
 
 hello
 world
 .
 
---------------------------q42MEsy9pgWREqXRA7A8ud--
+--------------------------RxN8nUhV7pI3nC0pLRgjSi--
 #+end_src
