@@ -1,0 +1,212 @@
+#+title: Uploading a file with cURL
+#+categories: cloud
+#+date: [2025-02-03 Mon]
+
+* About
+
+My ~tcpdump~ skills are still fresh. Let's go inspect some traffic when we
+upload a file with cURL.
+
+* Experiment
+
+Let's host a TCP server with ~netcat~:
+
+#+begin_src shell
+  nc -l 1234
+#+end_src
+
+And then let's create a *foobar* file that contains some new lines to see how cURL will handle it .
+
+#+begin_src shell
+  echo hello > foobar
+  echo world >> foobar
+  echo . >> foobar
+#+end_src
+
+The ~--data~ family of flags use ~application/x-www-form-urlencoded~ as
+*Content-Type*.
+
+The ~--form~ family of flags use ~multipart/form-data~ as the *Content-Type*.
+
+*** --data
+
+Let's send the data over to our server using the ~--data~ flag.
+
+#+begin_src shell
+  curl --data @foobar http://localhost:1234
+#+end_src
+
+The client will be waiting from an http response from the server, so just type
+~HTTP/1.1 200 OK~ in netcat, and submit it entering a newline followed with the
+*EOF* character (~Control-D~ on Linux/MacOS).
+
+This is the HTTP request that will be sent to the server:
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 11
+Content-Type: application/x-www-form-urlencoded
+
+helloworld.
+#+end_src
+
+The carriage returns and newlines are stripped out because the @ character
+performs special interpretation.
+
+*** --data-urlencode
+
+If we wanted to include the new lines, then we will need to use
+~--data-urlencode~ instead to escape the newlines:
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 20
+Content-Type: application/x-www-form-urlencoded
+
+hello%0Aworld%0A.%0A
+#+end_src
+
+There are four more syntaxes for specifying the content. We've already
+experimented with the ~@filename~ syntax.
+
+Let's see *name@filname* now: ~curl --data-urlencode foobar@foobar
+http://localhost:1234~.
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 27
+Content-Type: application/x-www-form-urlencoded
+
+foobar=hello%0Aworld%0A.%0A
+#+end_src
+
+Let's see *content* now: ~curl --data-urlencode helloworld
+http://localhost:1234~.
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 10
+Content-Type: application/x-www-form-urlencoded
+
+helloworld
+#+end_src
+
+Let's see *=content* now: ~curl --data-urlencode =helloworld
+http://localhost:1234~.
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 10
+Content-Type: application/x-www-form-urlencoded
+
+helloworld
+#+end_src
+
+Let's see *name=content* now: ~curl --data-urlencode foobar=helloworld
+http://localhost:1234~.
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 17
+Content-Type: application/x-www-form-urlencoded
+
+foobar=helloworld
+#+end_src
+
+*** --form-string
+
+Now let's experiment requests that use ~multipart/form-data~ as *Content-Type*.
+
+The ~--form-string~ allows us to send strings as values.
+
+#+begin_src shell
+  curl --form-string foobar=helloworld http://localhost:1234
+#+end_src
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 163
+Content-Type: multipart/form-data; boundary=------------------------rq1DxrKk0eSy5XPZUjENER
+
+--------------------------rq1DxrKk0eSy5XPZUjENER
+Content-Disposition: form-data; name="foobar"
+
+helloworld
+--------------------------rq1DxrKk0eSy5XPZUjENER--
+#+end_src
+
+*** --form
+
+The ~--form~ flag adds meaning to the ~@~ and ~<~ when it prefixes the file.
+
+The ~@~ sign tells cURL to consider the file as a binary.
+
+#+begin_src shell
+  curl --form foobar=@foobar http://localhost:1234
+#+end_src
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 226
+Content-Type: multipart/form-data; boundary=------------------------3hamUzHq7nHNPqKS1edqyW
+
+--------------------------3hamUzHq7nHNPqKS1edqyW
+Content-Disposition: form-data; name="foobar"; filename="foobar"
+Content-Type: application/octet-stream
+
+hello
+world
+.
+
+--------------------------3hamUzHq7nHNPqKS1edqyW--
+#+end_src
+
+The ~<~ sign tells curl to consider the file as a text and retrieves its
+content. Be sure to to quote the ~<name=content>~ to escape the ~<~ sign from
+the shell.
+
+#+begin_src shell
+  curl --form "foobar=<foobar" http://localhost:1234
+#+end_src
+
+#+begin_src text
+POST / HTTP/1.1
+Host: localhost:1234
+User-Agent: curl/8.7.1
+Accept: */*
+Content-Length: 167
+Content-Type: multipart/form-data; boundary=------------------------q42MEsy9pgWREqXRA7A8ud
+
+--------------------------q42MEsy9pgWREqXRA7A8ud
+Content-Disposition: form-data; name="foobar"
+
+hello
+world
+.
+
+--------------------------q42MEsy9pgWREqXRA7A8ud--
+#+end_src
