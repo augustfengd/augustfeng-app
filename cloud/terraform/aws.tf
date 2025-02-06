@@ -250,3 +250,8 @@ resource "aws_apigatewayv2_api" "whoami" {
   name          = "whoami"
   protocol_type = "HTTP"
 }
+
+resource "aws_apigatewayv2_route" "default" {
+  api_id    = aws_apigatewayv2_api.whoami.id
+  route_key = "$default"
+}
