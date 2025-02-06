@@ -245,3 +245,8 @@ resource "aws_iam_role_policy_attachment" "gha-augustfeng-app" {
   role       = aws_iam_role.gha-augustfeng-app.name
   policy_arn = aws_iam_policy.gha-augustfeng-app.arn
 }
+
+resource "aws_apigatewayv2_api" "whoami" {
+  name          = "whoami"
+  protocol_type = "HTTP"
+}
