@@ -252,6 +252,7 @@ resource "aws_apigatewayv2_api" "whoami" {
 }
 
 resource "aws_apigatewayv2_route" "default" {
-  api_id    = aws_apigatewayv2_api.whoami.id
-  route_key = "$default"
+  api_id             = aws_apigatewayv2_api.whoami.id
+  route_key          = "$default"
+  authorization_type = "AWS_IAM"
 }
