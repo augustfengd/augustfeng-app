@@ -1,3 +1,7 @@
-secrets.json
+# secrets
+providers.json
+github-app.json
+
+# terraform
 .terraform/
 .terraform.lock.hcl

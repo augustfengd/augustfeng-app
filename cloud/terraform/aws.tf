@@ -256,3 +256,12 @@ resource "aws_apigatewayv2_route" "default" {
   route_key          = "$default"
   authorization_type = "AWS_IAM"
 }
+
+resource "aws_secretsmanager_secret" "github-app" {
+  name = "github-app"
+}
+
+resource "aws_secretsmanager_secret_version" "github-app" {
+  secret_id     = aws_secretsmanager_secret.github-app.id
+  secret_string = data.sops_file.github-app.raw
+}
