@@ -3,16 +3,23 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>augustfengapp</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <None Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Compile Include="Subprocess.fs" />
+    <Compile Include="PullRequest.fs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Secrets.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AWSSDK.SecretsManager" Version="4.0.0-preview.6" />
+    <PackageReference Include="AWSSDK.SSO" Version="4.0.0-preview.6" />
+    <PackageReference Include="AWSSDK.SSOOIDC" Version="4.0.0-preview.6" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />

@@ -1,14 +1,15 @@
 ﻿open System
 open System.Text
 open System.Text.Json
-open System.Threading.Tasks
+open Secrets
 open Microsoft.Extensions.Configuration
 open System.Security.Cryptography
 open Octokit
+open Subprocess
 
 type Flags =
-    { ClientId : int32
-      PrivateKey : string }
+    { ClientId : string
+      SecretName : string }
 
 type JwtHeader =
     { alg: string
@@ -49,36 +50,39 @@ let makeJwt header payload pem =
     let signature = sign data |> encodeBase64Url
     $"%s{header}.%s{payload}.%s{signature}"
     
-let makeApp jwt =
+let makeGitHubAppClient jwt =
     let credentials = Credentials(jwt, AuthenticationType.Bearer)
-    let app = new GitHubClient(new ProductHeaderValue("augustfeng.app"))
-    app.Credentials <- credentials
-    app
-    
-let makeInstallation id token =
-    let credentials = Credentials(token)
-    let installation = new GitHubClient(new ProductHeaderValue("augustfeng.app"))
-    installation.Credentials <- credentials
-    installation
- 
-let approvePr (client : GitHubClient) n =
-    let review = PullRequestReviewCreate()
-    review.Event <- PullRequestReviewEvent.Approve
-    client.PullRequest.Review.Create("augustfengd", "learn.things", 1, review).Wait()
+    let client = GitHubClient(ProductHeaderValue("augustfeng-app-as-github-app-client"))
+    client.Credentials <- credentials
+    client.GitHubApps
 
-let run flags =
+let makeGitHubClient token =
+    let credentials = Credentials(token)
+    let client = GitHubClient(ProductHeaderValue("augustfeng-app-as-github-client"))
+    client.Credentials <- credentials
+    client
+
+let getInstallation (client : IGitHubAppsClient) login = async {
+    let! installations = client.GetAllInstallationsForCurrent() |> Async.AwaitTask
+    return Seq.find (fun (installation : Installation) -> installation.Account.Login = login) installations
+}
+
+let run flags = async {
+    let secretsManagerClient = buildClient()
+    let! { PrivateKeyPem =  privateKeyPem } = getSecret secretsManagerClient flags.SecretName
     let header = makeJwtHeader () |> JsonSerializer.SerializeToUtf8Bytes |> encodeBase64Url
     let payload = makeJwtPayload flags.ClientId |> JsonSerializer.SerializeToUtf8Bytes |> encodeBase64Url
-    let jwt = makeJwt header payload flags.PrivateKey
-    let app = makeApp jwt |> _.GitHubApps
-    let installationId = app.GetAllInstallationsForCurrent().Result |> Seq.head |> _.Id 
-    let token = app.CreateInstallationToken(installationId).Result |> _.Token
-    let installation = makeInstallation installationId token
-    approvePr installation 1
-    0
+    let jwt = makeJwt header payload privateKeyPem
+    let gitHubAppsClient = makeGitHubAppClient jwt
+    let! installation = getInstallation gitHubAppsClient "augustfengd"
+    let! installationToken = gitHubAppsClient.CreateInstallationToken(installation.Id) |> Async.AwaitTask
+    let gitHubClient = makeGitHubClient installationToken.Token
+    let ghCloneLearnThings = gh installationToken.Token "repo clone augustfengd/learn.things" "/tmp" |> Async.RunSynchronously
+    return ()
+ }
 
 [<EntryPoint>]
 let main _ =
     let flags = getFlags()
-    run flags
+    run flags |> Async.RunSynchronously
     0
