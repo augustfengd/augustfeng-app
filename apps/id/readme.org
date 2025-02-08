@@ -1,0 +1,7 @@
+* About
+
+I wrote this lambda with the purpose of integrating it with API Gateway and protecting the route with IAM AUTH:
+
+#+begin_src shell
+  curl --aws-sigv4 "aws:amz:us-east-1:execute-api" --user "${AWS_ACCESS_KEY_ID}:${AWS_SECRET_ACCESS_KEY}" --header "x-amz-security-token: $AWS_SESSION_TOKEN" "https://qq78eckyzg.execute-api.us-east-1.amazonaws.com"
+#+end_src
