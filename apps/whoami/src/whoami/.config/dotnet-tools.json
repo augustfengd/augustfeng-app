@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "fsautocomplete": {
+      "version": "0.75.0",
+      "commands": [
+        "fsautocomplete"
+      ],
+      "rollForward": false
+    },
+    "amazon.lambda.tools": {
+      "version": "5.12.4",
+      "commands": [
+        "dotnet-lambda"
+      ],
+      "rollForward": false
+    }
+  }
+}
