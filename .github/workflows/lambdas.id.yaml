@@ -3,7 +3,7 @@ name: apps/id
   push:
     branches: main
     paths:
-      - apps/whoami/**
+      - apps/id/**
 
 concurrency: apps/whoami
 jobs:
