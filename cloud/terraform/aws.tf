@@ -261,12 +261,9 @@ resource "aws_apigatewayv2_integration" "default" {
   api_id           = aws_apigatewayv2_api.whoami.id
   integration_type = "AWS_PROXY"
 
-  connection_type           = "INTERNET"
-  content_handling_strategy = "CONVERT_TO_TEXT"
-  description               = "whoami"
-  integration_method        = "POST"
-  integration_uri           = aws_lambda_function.example.invoke_arn
-  passthrough_behavior      = "WHEN_NO_MATCH"
+  connection_type = "INTERNET"
+  description     = "id"
+  integration_uri = aws_lambda_function.id.invoke_arn
 }
 
 
@@ -290,7 +287,7 @@ data "aws_iam_policy_document" "augustfeng_app_id_trust_policy" {
   }
 }
 
-resource "aws_iam_role" "augustfeng_app_whoami_role" {
+resource "aws_iam_role" "augustfeng_app_id_role" {
   name               = "AugustfengAppIdRole"
   assume_role_policy = data.aws_iam_policy_document.augustfeng_app_id_trust_policy.json
 }
