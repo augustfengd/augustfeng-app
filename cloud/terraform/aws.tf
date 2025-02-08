@@ -250,7 +250,7 @@ resource "aws_apigatewayv2_route" "default" {
   api_id             = aws_apigatewayv2_api.whoami.id
   route_key          = "$default"
   authorization_type = "AWS_IAM"
-  target             = aws_apigatewayv2_integration.default.id
+  target             = format("integrations/%s", aws_apigatewayv2_integration.default.id)
 }
 
 resource "aws_apigatewayv2_stage" "default" {
