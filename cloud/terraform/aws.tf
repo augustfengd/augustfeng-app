@@ -279,7 +279,7 @@ resource "aws_iam_role" "augustfeng_app_whoami_role" {
 
 resource "aws_lambda_function" "augustfeng_app_whoami" {
   s3_bucket     = aws_s3_bucket.augustfeng-app.bucket
-  s3_key        = "whoami"
+  s3_key        = "whoami/whoami.zip"
   function_name = "whoami"
   role          = aws_iam_role.augustfeng_app_whoami_role.arn
   handler       = "whoami::whoami.Function::FunctionHandler"
