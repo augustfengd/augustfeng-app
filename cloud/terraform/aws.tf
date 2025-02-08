@@ -253,8 +253,9 @@ resource "aws_apigatewayv2_route" "default" {
 }
 
 resource "aws_apigatewayv2_stage" "default" {
-  api_id = aws_apigatewayv2_api.whoami.id
-  name   = "$default"
+  api_id      = aws_apigatewayv2_api.whoami.id
+  name        = "$default"
+  auto_deploy = true
 }
 
 resource "aws_apigatewayv2_integration" "default" {
