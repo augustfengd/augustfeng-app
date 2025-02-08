@@ -93,11 +93,6 @@ resource "aws_cloudfront_origin_access_control" "sigv4-always-s3" {
   origin_access_control_origin_type = "s3"
 }
 
-import {
-  to = aws_cloudfront_distribution.blog-augustfeng-app
-  id = "E2U5ZC18W82IDW"
-}
-
 resource "aws_cloudfront_distribution" "blog-augustfeng-app" {
   origin {
     domain_name              = aws_s3_bucket.augustfeng-app.bucket_regional_domain_name
@@ -264,4 +259,30 @@ resource "aws_secretsmanager_secret" "github-app" {
 resource "aws_secretsmanager_secret_version" "github-app" {
   secret_id     = aws_secretsmanager_secret.github-app.id
   secret_string = data.sops_file.github-app.raw
+}
+
+data "aws_iam_policy_document" "augustfeng_app_whoami_trust_policy" {
+  statement {
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "augustfeng_app_whoami_role" {
+  name               = "AugustfengAppWhoamiRole"
+  assume_role_policy = data.aws_iam_policy_document.augustfeng_app_whoami_trust_policy.json
+}
+
+resource "aws_lambda_function" "augustfeng_app_whoami" {
+  s3_bucket     = aws_s3_bucket.augustfeng-app.bucket
+  s3_key        = "whoami"
+  function_name = "whoami"
+  role          = aws_iam_role.augustfeng_app_whoami_role.arn
+  handler       = "whoami::whoami.Function::FunctionHandler"
+
+  runtime = "dotnet8"
 }
