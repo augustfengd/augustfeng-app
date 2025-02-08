@@ -1,0 +1,34 @@
+name: apps/id
+"on":
+  push:
+    branches: main
+    paths:
+      - apps/whoami/**
+
+concurrency: apps/whoami
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: cd apps/id; dotnet tool restore
+    - run: cd apps/id; dotnet lambda package
+    - uses: actions/upload-artifact@v4
+      with:
+        name: id
+        path: apps/id/src/id.zip
+  push:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      id-token: write
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: whoami
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: us-east-1
+        role-to-assume: "arn:aws:iam::449594425026:role/GitHubActionsAugustfengApp"
+    - run: "aws s3 cp id.zip s3://augustfeng-app/lambdas/id.zip"
+    - run: "aws lambda update-function-code --function-name id --s3-bucket augustfeng-app --s3-key lambdas/id.zip"

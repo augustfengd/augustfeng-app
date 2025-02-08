@@ -252,6 +252,24 @@ resource "aws_apigatewayv2_route" "default" {
   authorization_type = "AWS_IAM"
 }
 
+resource "aws_apigatewayv2_stage" "default" {
+  api_id = aws_apigatewayv2_api.whoami.id
+  name   = "$default"
+}
+
+resource "aws_apigatewayv2_integration" "default" {
+  api_id           = aws_apigatewayv2_api.whoami.id
+  integration_type = "AWS_PROXY"
+
+  connection_type           = "INTERNET"
+  content_handling_strategy = "CONVERT_TO_TEXT"
+  description               = "whoami"
+  integration_method        = "POST"
+  integration_uri           = aws_lambda_function.example.invoke_arn
+  passthrough_behavior      = "WHEN_NO_MATCH"
+}
+
+
 resource "aws_secretsmanager_secret" "github-app" {
   name = "github-app"
 }
@@ -261,7 +279,7 @@ resource "aws_secretsmanager_secret_version" "github-app" {
   secret_string = data.sops_file.github-app.raw
 }
 
-data "aws_iam_policy_document" "augustfeng_app_whoami_trust_policy" {
+data "aws_iam_policy_document" "augustfeng_app_id_trust_policy" {
   statement {
     principals {
       type        = "Service"
@@ -273,16 +291,16 @@ data "aws_iam_policy_document" "augustfeng_app_whoami_trust_policy" {
 }
 
 resource "aws_iam_role" "augustfeng_app_whoami_role" {
-  name               = "AugustfengAppWhoamiRole"
-  assume_role_policy = data.aws_iam_policy_document.augustfeng_app_whoami_trust_policy.json
+  name               = "AugustfengAppIdRole"
+  assume_role_policy = data.aws_iam_policy_document.augustfeng_app_id_trust_policy.json
 }
 
-resource "aws_lambda_function" "augustfeng_app_whoami" {
+resource "aws_lambda_function" "id" {
   s3_bucket     = aws_s3_bucket.augustfeng-app.bucket
-  s3_key        = "whoami/whoami.zip"
-  function_name = "whoami"
-  role          = aws_iam_role.augustfeng_app_whoami_role.arn
-  handler       = "whoami::whoami.Function::FunctionHandler"
+  s3_key        = "lambdas/id.zip"
+  function_name = "id"
+  role          = aws_iam_role.augustfeng_app_id_role.arn
+  handler       = "id::id.Function::FunctionHandler"
 
   runtime = "dotnet8"
 }

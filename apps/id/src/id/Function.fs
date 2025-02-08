@@ -1,4 +1,4 @@
-namespace whoami
+namespace id
 
 
 open System.Text.Json
@@ -11,14 +11,6 @@ open System
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [<assembly: LambdaSerializer(typeof<Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer>)>]
 ()
-
-type FunctionInput =
-    { [<JsonPropertyName("key1")>]
-      Key1 : string
-      [<JsonPropertyName("key2")>]
-      Key2 : string
-      [<JsonPropertyName("key3")>]
-      Key3 : string }
 
 type Function() =
     /// <summary>

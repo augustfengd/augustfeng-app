@@ -16,6 +16,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\whoami\whoami.fsproj" />
+    <ProjectReference Include="..\..\src\id\id.fsproj" />
   </ItemGroup>
 </Project>

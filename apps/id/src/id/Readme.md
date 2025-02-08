@@ -38,12 +38,12 @@ If already installed check if new version is available.
 
 Execute unit tests
 ```
-    cd "whoami/test/whoami.Tests"
+    cd "id/test/id.Tests"
     dotnet test
 ```
 
 Deploy function to AWS Lambda
 ```
-    cd "whoami/src/whoami"
+    cd "id/src/id"
     dotnet lambda deploy-function
 ```
