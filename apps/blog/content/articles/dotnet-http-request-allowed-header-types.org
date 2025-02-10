@@ -1,0 +1,63 @@
+#+title: Allowed HTTP Request Header Types
+#+categories: programming
+#+date: [2025-02-09 Sun]
+
+* About
+
+I'm trying to build a reverse proxy but it seems that there are some constraints
+on the headers that we can add to a *HttpRequestMessage*.
+
+#+begin_src fsharp
+open System.Net.Http
+
+let client = new HttpClient()
+
+let request = new HttpRequestMessage(HttpMethod.Post, "https://example.com")
+
+let tryAddHeader (message : HttpRequestMessage) (k : string) (v : string) =
+    match message.Headers.TryAddWithoutValidation(k,v) with
+    | true -> ()
+    | false -> eprintfn $"Failed to add header: {k}."
+
+let addHeader (message : HttpRequestMessage) (k : string) (v : string) =
+    message.Headers.Add(k,v)
+
+tryAddHeader request "Content-Type" "text/plain" // XXX: Failed to add header: Content-Type.
+tryAddHeader request "Content-Length" "7" // XXX: Failed to add header: Content-Length.
+
+addHeader request "Content-Length" "7" // XXX: throws an exception.
+
+let response = client.Send(request)
+#+end_src
+
+* Allowed Headers
+
+The ~TryAddWithoutValidation~ will verify whether the header is allowed before
+adding it.
+
+#+begin_src csharp
+public bool TryAddWithoutValidation(string name, string? value) =>
+            TryGetHeaderDescriptor(name, out HeaderDescriptor descriptor) &&
+            TryAddWithoutValidation(descriptor, value);
+#+end_src
+
+The ~TryGetHeaderDescriptor~ will categorize the ~Content-Type~ and
+~Content-length~ as a *Content* and that's not an allowed header type.
+
+#+begin_src csharp
+// header type.
+{
+  [Flags]
+  internal enum HttpHeaderType : byte
+  {
+    General = 1,
+    Request = 2,
+    Response = 4,
+    Content = 8,
+    Custom = 16, // 0x10
+    NonTrailing = 32, // 0x20
+    All = NonTrailing | Custom | Content | Response | Request | General, // 0x3F
+    None = 0,
+  }
+}
+#+end_src

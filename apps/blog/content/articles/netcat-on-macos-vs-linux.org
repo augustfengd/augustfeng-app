@@ -1,0 +1,18 @@
+#+title: netcat on MacOS vs Linux
+
+* MacOS
+
+When we run a TCP server (~nc -l 1234~) with nc and send it traffic with a
+client (~echo foobar | nc localhost 1234~) nc , the client will exist.
+
+* Linux
+
+When we run a TCP server (~nc -l 1234~) with nc and send it traffic with a
+client (~echo foobar | nc localhost 1234~) nc , the client will *not* exit.
+
+We need to include the ~-N~ flag when running nc.
+
+* Caveats
+
+For the record, I've only experimented with MacOS's netcat implementation, and
+the netcat-openbsd implementation on Linux.
