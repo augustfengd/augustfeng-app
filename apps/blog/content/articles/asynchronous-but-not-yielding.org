@@ -15,19 +15,22 @@ needs to be a yield before the runtime will execute the next line.
 In the program below, the execution does not get past the first ~busyWait~.
 
 #+begin_src fsharp
-  let busyWait filename = task {
-      while System.IO.File.Exists(filename) |> not do
-          // do! Async.Sleep(1) // <-- this will yield the execution back to ~main~.
-          ()
-      printfn $"{filename} exists!"
-  }
+open System.Threading.Tasks
 
-  [<EntryPoint>]
-  let main _ =
-      busyWait "a.txt"
-      printfn "helloworld"
-      busyWait "b.txt"
-      0
+let busyWait filename = task {
+    while System.IO.File.Exists(filename) |> not do
+        // do! Task.Yield() // XXX: this will yield control back to the main function
+        ()
+    printfn $"{filename} exists!"
+}
+
+[<EntryPoint>]
+let main _ =
+    let a = busyWait "a.txt"
+    printfn "helloworld"
+    let b = busyWait "b.txt"
+    Task.WaitAll(a,b)
+    0
 #+end_src
 
 My server/client architecture has a bunch of asynchronous operations that
