@@ -61,3 +61,36 @@ The ~TryGetHeaderDescriptor~ will categorize the ~Content-Type~ and
   }
 }
 #+end_src
+
+* Message.Content.Headers
+
+I investigated the [[https://dotnet.github.io/yarp/index.html][yarp]] project to understand how they were proxying the headers
+and learned that these headers can be added by using methods on the
+~req.Content.Headers~ object.
+
+#+begin_src fsharp
+open System.IO
+open System.Net.Http
+
+let client = new HttpClient()
+
+let ms =
+    let bytes = "helloworld" |> System.Text.Encoding.UTF8.GetBytes
+    new MemoryStream(bytes)
+
+let buildMessage () =
+    let req = new HttpRequestMessage(HttpMethod.Post, "http://localhost:1234")
+    req.Content <- new StreamContent(ms)
+    req.Content.Headers.TryAddWithoutValidation("Content-Type", "application/augustfeng") |> ignore
+    req.Content.Headers.TryAddWithoutValidation("Content-Length", "10") |> ignore
+    req
+
+let message = buildMessage()
+
+let response = client.Send(message)
+
+0
+#+end_src
+
+The ~req.Content.Headers~ object is an instance of a *HttpContentHeaders* class
+whereas the ~req.Headers~ is an *HttpRequestHeaders* object.
