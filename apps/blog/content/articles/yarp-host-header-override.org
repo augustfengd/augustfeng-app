@@ -1,0 +1,25 @@
+#+title: yarp host header override
+#+categories: programming
+#+date: [2025-02-10 Mon]
+
+* About
+
+I was curious to see how the yarp proxy handles the host header when proxying.
+
+* Learning
+
+They copy over all the original request headers to a new http message.
+Afterwards, a set of transformers are applied to the http message.
+
+One of these transformers is the ~RequestHeaderOriginalHostTransform~ which
+overrides the *Host* header with the destination host.
+
+#+begin_src csharp
+  else if (existingHost is null || string.Equals(originalHost, existingHost, StringComparison.Ordinal))
+  {
+      // Use the host from destination configuration (which may be null) if either:
+      // * there is no host header set, or
+      // * the original host header is being suppressed and has not been modified by the transform pipeline
+      context.ProxyRequest.Headers.Host = destinationConfigHost;
+  }
+#+end_src
