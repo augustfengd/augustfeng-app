@@ -1,0 +1,65 @@
+#+title: Compiling apt in a container
+
+* About
+
+I was in the mood to debug ~apt~ so let's do it. Since I'm on a mac, I'll be
+using a docker container as an environment.
+
+* Install docker-tramp
+
+The ~docker-tramp~ package will allow me to use dired with a container's file
+system.
+
+* Configuring the debian sources
+
+The ~apt~ project allows to download a packages source code, we just need to
+enable it in the sources list.
+
+The ~/etc/apt/sources.list.d/ubuntu.sources~ has some comments about how to
+enable the sources repository. (Hint: just append "-src" to *Type*)
+
+The sources file describes this operation as a way to enable the fetching of
+source package
+
+Now we're going to be compiling the ~apt~ package, so just run ~apt source apt~
+and install the necessary dependencies: ~apt build-dep apt~.
+
+* Compiling apt
+
+You can use the ~dpkg-buildpackages~ to create the packages of the project.
+
+#+begin_src shell
+  dpkg-buildpackages
+#+end_src
+
+And then later, I finally understood that ~cmake .~ will build the ~makefile~
+and I can just ~make apt~.
+
+* What I was looking for
+
+I'm configuring apt with mTLS and the client key is stored in the
+~/etc/ssl/private~ folder, which is owned by root and has 700 permissions.
+
+#+begin_src conf
+Acquire::https::example.org {
+    Verify-Peer "false";
+
+    CaInfo "/etc/ssl/certs/server.pem";
+    SslCert "/etc/ssl/certs/client.pem";
+    SslKey  "/etc/ssl/private/client.pem";
+}
+#+end_src
+
+When we run ~sudo apt update~, the ~apt~ program is not able to read the key
+which is strange because the command is being run with ~sudo~.
+
+Turns out, apt comes with an unprivileged ~_apt~ user and it drops into that
+user when acquiring packages.
+
+* What I also found
+
+I learned that ~apt~ will spin up processes as worker and send messages to them.
+There's a bunch of them in ~/usr/lib/apt/methods~.
+
+The debug logs for these can be enabled with a configuration in the apt.conf:
+~Debug::pkgAcquire::Worker "true";~.
