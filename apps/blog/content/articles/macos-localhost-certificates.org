@@ -1,0 +1,30 @@
+#+title: macos localhost certificates
+#+categories: programming
+#+date: [2025-02-13 Thu]
+
+* About
+
+Safari warns us when a connection is not private and offers us the choice to
+*visit this website* anyways.
+
+If we confirm, we will not get the warning again. Interestingly, we won't even
+get the warning when we visit using a private browsing.
+
+If we host the website on another port, we *will* get the warning again.
+
+* Reproducer
+
+The ~dotnet~ cli offers us utilities for generating self signed certificates for
+localhost: ~dotnet dev-certs https~.
+
+If we delete and recreate the certificates, then Safari will prompt the warning
+again. This tells me there's a mapping at the OS somewhere that remembers which
+ports we've yolo'd for a given certificate.
+
+* Extra
+
+We can *trust* self signed certificates to avoid that warning altogether:
+~dotnet dev-certs https --trust~.
+
+The cli will disclaim that this just runs a ~security add-trusted-cert -p basic
+-p ssl -k <<login-keychain>> <<certificate>>~ command.
