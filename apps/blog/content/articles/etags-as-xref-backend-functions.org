@@ -1,0 +1,49 @@
+#+title: etags as xref backend functions
+#+categories: emacs
+#+date: [2025-02-14 Fri]
+
+* About
+
+I built the *TAGS* file in some open source projects but Emacs's
+~xref-find-definitions~ was failing me.
+
+I remembered that I had encountered this issue a few weeks ago and completely
+forgot my learnings.
+
+I'm going to be documenting them here now in hopes that I'll remember for next
+time.
+
+* Debugging
+
+I authored a very bare c program and built the *TAGS* file. Emacs was
+successfully finding the definitions. So what's up?
+
+I found out that it was still finding the definitions when the *TAGS* file was
+not present!
+
+When I spun up Emacs without any configuration, it was only working when the
+*TAGS* file was present. This is the expected behavior!
+
+* Findings
+
+There's a variable, ~xref-backend-functions~, that configures the choice of
+backends for Emacs.
+
+On Spacemacs, it seems that it's default value is ~(dumb-jump-xref-activate
+etags--xref-backend)~.
+
+The *dumb-jump-xref-activate* function is being matched instead of the
+*etags--xref-backend* one!
+
+* Conclusion
+
+This can be fixed by reconfiguring ~xref-backend-functions~.
+
+#+begin_src emacs-lisp
+  (setq xref-backend-functions '(etags--xref-backend))
+#+end_src
+
+I'd like to see if there's a better designed way to configure the
+xref-backend-functions though.
+
+I can see that in elisp files, it is reconfigured for the buffer.
