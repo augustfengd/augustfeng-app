@@ -35,15 +35,70 @@ etags--xref-backend)~.
 The *dumb-jump-xref-activate* function is being matched instead of the
 *etags--xref-backend* one!
 
-* Conclusion
+* Configuration
 
-This can be fixed by reconfiguring ~xref-backend-functions~.
+This can be fixed by reconfiguring ~xref-backend-functions~. When
+*emacs-lisp-mode* is used, that variable is locally configured:
 
 #+begin_src emacs-lisp
-  (setq xref-backend-functions '(etags--xref-backend))
+  (define-derived-mode emacs-lisp-mode lisp-data-mode
+    ;; ...
+    (add-hook 'xref-backend-functions #'elisp--xref-backend nil t)
+    ;; ...
+    )
 #+end_src
 
-I'd like to see if there's a better designed way to configure the
-xref-backend-functions though.
+In the end, we end up with this value: ~(elisp--xref-backend t)~.
 
-I can see that in elisp files, it is reconfigured for the buffer.
+* Roadblocks
+
+When we run the same function but with ~etags--xref-backend~ as an argument, we
+end up with a list where ~etags--xref-backend~ is at the end: ~(t
+etags--xref-backend)~.
+
+Consequently, ~t~ will be matched first and ~t~ acts as a flag to use the global
+~xref-backend-functions~ variable. Why is this?
+
+It's because ~etags--xref-backend~ is already added to the hooks, and cached a
+/depth/ of 90. Hint: The depth acts as a way to order the functions.
+
+#+begin_src emacs-lisp
+  ;; xref.el
+  (add-hook 'xref-backend-functions #'etags--xref-backend t) ;; `t' configures depth.
+#+end_src
+
+We can confirm it's depth by getting the properties of the symbol:
+
+#+begin_src emacs-lisp
+  (symbol-value (get 'xref-backend-functions 'hook--depth-alist))
+#+end_src
+
+* Solution #1
+
+How can we solve this then? Add a hook with an earlier depth!?
+
+#+begin_src emacs-lisp
+  (add-hook 'c-mode-hook (lambda ()
+                           (add-hook 'xref-backend-functions #'etags--xref-backend -1 t)))
+#+end_src
+
+But this will override it's depth for everyone:
+
+#+begin_src emacs-lisp
+  (symbol-value (get 'xref-backend-functions 'hook--depth-alist)) ;; we will see -1 even outside of c-mode.
+#+end_src
+
+* Solution #2
+
+Just configure it authoratively in a local buffer to avoid ~add-hook~ injecting
+a ~t~ flag.
+
+Also, I'm configuring c-mode using a personal spacemacs layer. Since the
+~c-mode~ is not a package by itself, I create an init function for ~cc-mode~.
+
+#+begin_src emacs-lisp
+  (defun augustfengd/init-cc-mode ()
+    (add-hook 'c-mode-hook (lambda ()
+                             (make-local-variable 'xref-backend-functions)
+                             (set 'xref-backend-functions '(etags--xref-backend)))))
+#+end_src
