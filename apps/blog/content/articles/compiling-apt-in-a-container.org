@@ -1,4 +1,6 @@
 #+title: Compiling apt in a container
+#+categories: devops
+#+date: [2025-02-14 Fri]
 
 * About
 
