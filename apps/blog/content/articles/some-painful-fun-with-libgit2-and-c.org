@@ -1,4 +1,6 @@
 #+title: some painful fun with libgit2 and c
+#+categories: programming
+#+date: [2025-02-15 Sat]
 
 * About
 
