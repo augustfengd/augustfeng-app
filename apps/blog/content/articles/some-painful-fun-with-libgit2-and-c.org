@@ -1,0 +1,64 @@
+#+title: some painful fun with libgit2 and c
+
+* About
+
+I wanted to experience C pain. So I compiled the libgit2 and build a program with it.
+
+* Program
+
+#+begin_src c
+#include <git2.h>
+#include <stdio.h>
+#include <string.h>
+
+int diff_file_callback(const git_diff_delta *delta, float progress, void *payload) {
+  printf("Old file: %s\n", delta->old_file.path);
+  printf("New file: %s\n", delta->new_file.path);
+  return 0;
+}
+
+int diff_hunk_callback(const git_diff_delta *delta, const git_diff_hunk *hunk, void *payload) {
+  printf("Hunk: --- %s  +++ %s\n", delta->old_file.path, delta->new_file.path);
+  printf("Hunk line range: Old start %d, Old end %d -> New start %d, New end %d\n",
+         hunk->old_start, hunk->old_lines, hunk->new_start, hunk->new_lines);
+  return 0;
+}
+
+int diff_line_callback(const git_diff_delta *delta, const git_diff_hunk *hunk, const git_diff_line *line, void *payload) {
+  switch (line->origin) {
+  case GIT_DIFF_LINE_ADDITION:
+    printf("Added line: %.*s\n", (int)line->content_len, line->content);
+    break;
+  case GIT_DIFF_LINE_DELETION:
+    printf("Deleted line: %.*s\n", (int)line->content_len, line->content);
+    break;
+  default:
+    break;
+  }
+  return 0;
+}
+
+int main() {
+    git_libgit2_init();
+
+    const char *old_buf = "Hello, World!\nThis is the old version.";
+    size_t old_len = strlen(old_buf);
+    const char *new_buf = "Hello, World!\nThis is the new version.";
+    size_t new_len = strlen(new_buf);
+
+    // file level
+    printf("--- file level ---\n");
+    git_diff_buffers(old_buf, old_len, "foobar", new_buf, new_len, "foobaz", NULL, diff_file_callback, NULL, NULL, NULL, NULL);
+
+    // hunk level
+    printf("--- hunk level ---\n");
+    git_diff_buffers(old_buf, old_len, "foobar", new_buf, new_len, "foobaz", NULL, NULL, NULL, diff_hunk_callback, NULL, NULL);
+
+    // line level
+    printf("--- line level ---\n");
+    git_diff_buffers(old_buf, old_len, "foobar", new_buf, new_len, "foobaz", NULL, NULL, NULL, NULL, diff_line_callback, NULL);
+
+    git_libgit2_shutdown();
+    return 0;
+}
+#+end_src
