@@ -1,0 +1,79 @@
+#+title: some fun interop between c and sharp
+#+categories: programming
+#+date: [2025-02-16 Sun]
+
+* About
+
+I wanted to be better.
+
+* Unmanaged Side
+
+Let's create some C library:
+
+#+begin_src c
+#include <stdio.h>
+
+void bar(const void *b) {
+  printf("Buffer received at address: %p\n", b);
+}
+
+void baz(const char *s) {
+  printf("string received: %s", s);
+}
+
+typedef int (*Operation)(int,int);
+
+int qux(int a, int b, Operation op) {
+  return op(a,b);
+}
+#+end_src
+
+We can build the *libfoo.dylib* like this:
+
+#+begin_src shell
+  cc -shared -o libfoo.dylib -fPIC foo.c
+#+end_src
+
+* Managed Side
+
+Let's write a F# application that calls the C library:
+
+#+begin_src fsharp
+open System
+open System.Runtime.InteropServices
+
+
+module NativeMethods =
+    [<DllImport("libfoo")>]
+    extern void bar(void* b);
+
+    [<DllImport("libfoo")>]
+    extern void baz(string s);
+
+    type Operation = delegate of int * int -> int
+
+    [<DllImport("libfoo")>]
+    extern int qux(int a, int b, Operation operation)
+
+module Call =
+    let bar () =
+        let b = [| 1uy ;  2uy |]
+        let ptr = Marshal.UnsafeAddrOfPinnedArrayElement(b, 0)
+        NativeMethods.bar ptr
+
+    let baz () =
+        let s = "foobar"
+        NativeMethods.baz s
+
+    let qux () =
+        let add (a : int) (b : int) = a + b
+        let n = NativeMethods.qux(1,2, add)
+        printfn $"Computed: {n}"
+
+[<EntryPoint>]
+let main _ =
+    Call.bar ()
+    Call.baz ()
+    Call.qux ()
+    0
+#+end_src
