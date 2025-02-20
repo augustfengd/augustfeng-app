@@ -12,9 +12,11 @@ Let's create some C library:
 
 #+begin_src c
 #include <stdio.h>
+#include <string.h>
 
-void bar(const void *b) {
+void bar(void *b) {
   printf("Buffer received at address: %p\n", b);
+  strcpy(b, "bonjour"); // XXX: yolo buffer overflow.
 }
 
 void baz(const char *s) {
@@ -25,6 +27,10 @@ typedef int (*Operation)(int,int);
 
 int qux(int a, int b, Operation op) {
   return op(a,b);
+}
+
+void x(char *s) {
+  s[0] = 'x';
 }
 #+end_src
 
@@ -55,11 +61,16 @@ module NativeMethods =
     [<DllImport("libfoo")>]
     extern int qux(int a, int b, Operation operation)
 
+    [<DllImport("libfoo")>]
+    extern void x(nativeint s)
+
 module Call =
     let bar () =
-        let b = [| 1uy ;  2uy |]
-        let ptr = Marshal.UnsafeAddrOfPinnedArrayElement(b, 0)
+        let bytes = "helloworld" |> System.Text.Encoding.UTF8.GetBytes
+        let ptr = Marshal.UnsafeAddrOfPinnedArrayElement(bytes, 0)
         NativeMethods.bar ptr
+        // let c = bytes.[0]
+        printfn $"{bytes |> System.Text.Encoding.UTF8.GetString}"
 
     let baz () =
         let s = "foobar"
@@ -70,10 +81,30 @@ module Call =
         let n = NativeMethods.qux(1,2, add)
         printfn $"Computed: {n}"
 
+    let x () =
+        let s = "helloworld"
+        let ptr = Marshal.StringToHGlobalAnsi(s)
+        NativeMethods.x ptr
+        let s' = Marshal.PtrToStringAnsi(ptr)
+        printfn $"x'd: {s'}"
+
 [<EntryPoint>]
 let main _ =
     Call.bar ()
     Call.baz ()
     Call.qux ()
+    Call.x ()
     0
+#+end_src
+
+* Output
+
+And for the curious ones! Here is the output.
+
+#+begin_src text
+Buffer received at address: 0x3000b04a0
+bonjourld
+Computed: 3
+x'd: xelloworld
+string received: foobar
 #+end_src
