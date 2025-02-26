@@ -1,0 +1,41 @@
+#+title: You can cURL unix sockets
+#+categories: web
+#+date: [2025-02-26 Wed]
+
+* About
+
+The docker API is hosted by default on a unix socket. It's mostly HTTP REST
+APIs, so let's cURL it.
+
+
+* cURL only
+
+The cURL cli supports unix sockets.
+
+#+begin_src shell
+  curl --unix-socket /var/run/docker.sock http:/localhost/images/json | jq
+#+end_src
+
+* cURL with pipes
+** nc
+
+We can chain a series of ~nc~ processes but the traffic is unable to flow back
+to the caller.
+
+#+begin_src shell
+  nc -l 1234 | nc -U /var/run/docker.sock
+#+end_src
+
+When we ~curl http://localhost:1234/images/json~, the response will be sent to
+the stdout connected to the second ~nc~ process instead of making its way back
+to the curl process.
+
+** socat
+
+We can avoid a pipeline by using ~socat~:
+
+#+begin_src
+  socat TCP-LISTEN:1234 UNIX-CLIENT:/var/run/docker.sock
+#+end_src
+
+And now we can ~curl http://localhost:1234/images/json~.
