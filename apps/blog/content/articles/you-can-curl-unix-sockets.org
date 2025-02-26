@@ -35,7 +35,7 @@ to the curl process.
 We can avoid a pipeline by using ~socat~:
 
 #+begin_src
-  socat TCP-LISTEN:1234 UNIX-CLIENT:/var/run/docker.sock
+  socat TCP-LISTEN:1234 UNIX-CONNECT:/var/run/docker.sock
 #+end_src
 
 And now we can ~curl http://localhost:1234/images/json~.
