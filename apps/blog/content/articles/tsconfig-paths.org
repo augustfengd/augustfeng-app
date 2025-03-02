@@ -1,0 +1,54 @@
+#+title: tsconfig paths
+#+date: [2025-03-01 Sat]
+
+* About
+
+As I've learned, the *module specifiers* in typescript have two audiences:
+- They're used by the host when resolving modules.
+- They're used by typescript to check type safety based on the imported module.
+
+I found myself in a bit of tricky situation when I wanted to author typescript
+code that imports npm modules without the intention of using a bundler in the
+build process.
+
+Instead, I'd like to use [[https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap][import maps]] to include the dependencies.
+
+Consequently, my development environment is radically different than my
+production environment.
+
+Since typescript does *not* transform the [[https://www.typescriptlang.org/docs/handbook/modules/theory.html#module-specifiers-are-not-transformed-by-default][module specifier]] and I did not want to
+use a bundler to glue things together, I was prepared for a challenge.
+
+* Paths
+
+The ~paths~ compiler option can be used as an alias to "hack" it so that we can
+write the module specifier as it's intended for the host while finding a way to
+let typescript know how to resolve the module.
+
+#+begin_src jsonc
+  // tsconfig.json
+  {
+      "compilerOptions": {
+          "module": "ES2022",
+          "baseUrl": ".",
+          "paths": {
+              "emacs": ["foo/bar"] // there is a foo/bar.ts file.
+          }
+      }
+  }
+#+end_src
+
+#+begin_src typescript
+  // program.ts
+  import { helloworld } from "emacs";
+
+  import { helloworld as h } from "foo/bar.js" // XXX: we're being incredibly explicit and accurate by specifying the expected output js file instead of letting typescript perform file extension substitution guessing.
+
+
+  function main() {
+      helloworld()
+      h()
+  }
+
+  main()
+#+end_src
