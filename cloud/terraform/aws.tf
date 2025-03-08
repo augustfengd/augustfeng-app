@@ -53,6 +53,10 @@ resource "aws_s3_bucket" "augustfengd" {
   bucket = "augustfengd"
 }
 
+resource "aws_s3_bucket" "augustfeng" {
+  bucket = "augustfeng"
+}
+
 resource "aws_s3_bucket" "augustfeng-app" {
   bucket = "augustfeng-app"
 }
