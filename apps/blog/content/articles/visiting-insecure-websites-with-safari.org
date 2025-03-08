@@ -1,0 +1,51 @@
+#+title: Visiting insecure websites with Safari
+#+date: [2025-03-08 Sat]
+
+* About
+
+I document some studies on my experiences with insecure websites. These
+experiments stem from when I insecurely visited my router's console page.
+
+The warning page never appeared afterwards and my curiosity peaked.
+
+* Experiments
+** Visiting insecure websites
+*** Visiting an insecure web server
+
+Safari will present a typical security page when I visit insecure websites.
+
+If I accept to *visit this website*, the server's certificate is *not* stored in
+the Keychain Access app.
+
+*** Visiting an insecure web server that can present different certificates
+
+I've provisioned two different certificates to be hosted on
+https://192.168.1.117:443: one issued to *foobar.local* and one issued to
+*foobaz.local*.
+
+When the *foobar.local* certificate is presented for the first time, Safari will
+ask if I want to *visit this website* anyways.
+
+Clicking the link will prevent warnings on future visits.
+
+If I switch present another certificate, *foobaz.local* for example, then the
+warning will present itself again and the confirmation is lost for
+*foobar.local*.
+
+** Visiting insecure websites after importing their certificates
+*** Safari can visit https://unifi.local securely and any domains that present that certificate.
+
+I can configure /any/ hostname to the router's ip address in ~/etc/hosts~, and
+Safari will trust that domain as long as they present a certificate that's
+trusted.
+
+This is very strange because the certificate is only signed for *unifi.local*,
+*localhost* and *[::1]* domains.
+
+*** Allows us to curl https://unifi.local and not other domains
+
+From a shell, curl will *only* securely connect to https://unifi.local though.
+
+*** Chrome can visit https://unifi.local securely but not https://_unifi.local securely.
+
+This is expected.

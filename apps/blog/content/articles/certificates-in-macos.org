@@ -1,0 +1,61 @@
+#+title: Certificates in MacOS
+#+date: [2025-03-08 Sat]
+
+* About
+
+I noticed a few different descriptions for certificates when viewing them in
+Safari.
+
+As a result, I wanted to be able to produce them myself to learn.
+
+* Experiments
+** Root certificate authority
+
+This certificate has the description of *Root certificate authority* when
+presented to Safari.
+
+#+begin_src shell
+  openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+#+end_src
+
+** Self-signed root certificate
+
+This certificate has the description of *Self-signed root certificate* when
+presented to Safari.
+
+I think the magic sauce is the presence of *Subject Alternative Name*.
+
+#+begin_src toml
+[ req ]
+distinguished_name = req_distinguished_name
+x509_extensions    = v3_req
+prompt             = no
+
+[ req_distinguished_name ]
+CN = ca.local
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = ca.local
+#+end_src
+
+#+begin_src shell
+  openssl req -x509 -newkey rsa:4096 -keyout server-key.pem -out server-cert.pem -days 365 -nodes -config san.cnf
+#+end_src
+
+** Issued by a local certificate authority
+
+This certificate has the description of *Issued by: ca.local* when presented to
+Safari.
+
+#+begin_src shell
+  openssl req -x509 -newkey rsa:4096 -keyout ca-key.pem -out ca-cert.pem -days 365 -nodes
+
+  openssl genrsa -out server-key.pem 2048
+  openssl req -new -key server-key.pem -out server-csr.pem
+
+  openssl x509 -req -in server-csr.pem -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -days 825 -sha256
+#+end_src
+
