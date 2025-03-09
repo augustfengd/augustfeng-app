@@ -13,7 +13,7 @@ resource "aws_identitystore_user" "augustfengd" {
   identity_store_id = var.aws_identity_store_id
 
   display_name = "August Feng"
-  user_name    = "augustfengd"
+  user_name    = "augustfeng"
 
   name {
     given_name  = "August"
