@@ -349,7 +349,7 @@ resource "aws_key_pair" "augustfeng" {
 }
 
 resource "aws_instance" "simple-login" {
-  ami           = "ami-0c4e709339fa8521" // XXX: Noble Numbat
+  ami           = "ami-0c4e709339fa8521a" // XXX: Noble Numbat
   instance_type = "t4g.micro"
   key_name      = aws_key_pair.augustfeng.key_name
 
