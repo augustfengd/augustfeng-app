@@ -353,6 +353,8 @@ resource "aws_instance" "simple-login" {
   instance_type = "t4g.micro"
   key_name      = aws_key_pair.augustfeng.key_name
 
+  subnet_id = aws_subnet.compute-1a.id
+
   instance_market_options {
     market_type = "spot"
   }
