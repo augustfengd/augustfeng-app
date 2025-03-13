@@ -45,6 +45,48 @@ resource "aws_subnet" "compute-1f" {
   cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 5)
 }
 
+resource "aws_internet_gateway" "compute" {
+  vpc_id = aws_vpc.compute.id
+}
+
+resource "aws_route_table" "compute" {
+  vpc_id = aws_vpc.compute.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.compute.id
+  }
+}
+
+resource "aws_route_table_association" "compute-1a" {
+  subnet_id      = aws_subnet.compute-1a.id
+  route_table_id = aws_route_table.compute.id
+}
+
+resource "aws_route_table_association" "compute-1b" {
+  subnet_id      = aws_subnet.compute-1b.id
+  route_table_id = aws_route_table.compute.id
+}
+
+resource "aws_route_table_association" "compute-1c" {
+  subnet_id      = aws_subnet.compute-1c.id
+  route_table_id = aws_route_table.compute.id
+}
+
+resource "aws_route_table_association" "compute-1d" {
+  subnet_id      = aws_subnet.compute-1d.id
+  route_table_id = aws_route_table.compute.id
+}
+
+resource "aws_route_table_association" "compute-1e" {
+  subnet_id      = aws_subnet.compute-1e.id
+  route_table_id = aws_route_table.compute.id
+}
+
+resource "aws_route_table_association" "compute-1f" {
+  subnet_id      = aws_subnet.compute-1f.id
+  route_table_id = aws_route_table.compute.id
+}
+
 resource "aws_identitystore_user" "augustfengd" {
   identity_store_id = var.aws_identity_store_id
 
