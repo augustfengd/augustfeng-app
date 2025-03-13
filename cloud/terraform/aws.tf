@@ -390,15 +390,19 @@ resource "aws_key_pair" "augustfeng" {
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
 }
 
+resource "aws_eip" "simple-login" {
+  instance = aws_instance.web.id
+  domain   = "vpc"
+}
+
 resource "aws_instance" "simple-login" {
   ami           = "ami-0c4e709339fa8521a" // XXX: Noble Numbat
   instance_type = "t4g.micro"
   key_name      = aws_key_pair.augustfeng.key_name
 
 
-  vpc_security_group_ids      = [aws_security_group.simple-login.id]
-  subnet_id                   = aws_subnet.compute-1a.id
-  associate_public_ip_address = true
+  vpc_security_group_ids = [aws_security_group.simple-login.id]
+  subnet_id              = aws_subnet.compute-1a.id
 
   instance_market_options {
     market_type = "spot"

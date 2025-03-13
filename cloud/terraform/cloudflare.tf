@@ -6,6 +6,13 @@ resource "cloudflare_record" "aws" {
   proxied = true
 }
 
+resource "cloudflare_record" "simplelogin" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-app
+  name    = "simplelogin"
+  content = aws_eip.simple-login.address
+  type    = "A"
+}
+
 resource "cloudflare_ruleset" "single_redirects" {
   zone_id     = var.cloudflare_zone_ids.augustfeng-app
   name        = "redirects"
