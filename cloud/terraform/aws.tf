@@ -9,6 +9,42 @@ resource "aws_vpc" "compute" {
   }
 }
 
+resource "aws_subnet" "compute-1a" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1a"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 0)
+}
+
+resource "aws_subnet" "compute-1b" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1b"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 1)
+}
+
+resource "aws_subnet" "compute-1c" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1c"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 2)
+}
+
+resource "aws_subnet" "compute-1d" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1d"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 3)
+}
+
+resource "aws_subnet" "compute-1e" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1e"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 4)
+}
+
+resource "aws_subnet" "compute-1f" {
+  vpc_id            = aws_vpc.compute.id
+  availability_zone = "us-east-1f"
+  cidr_block        = cidrsubnet(aws_vpc.compute.cidr_block, 4, 5)
+}
+
 resource "aws_identitystore_user" "augustfengd" {
   identity_store_id = var.aws_identity_store_id
 
@@ -305,4 +341,19 @@ resource "aws_lambda_function" "id" {
   handler       = "id::id.Function::FunctionHandler"
 
   runtime = "dotnet8"
+}
+
+resource "aws_key_pair" "augustfeng" {
+  key_name   = "augustfeng"
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
+}
+
+resource "aws_instance" "simple-login" {
+  ami           = "ami-0c4e709339fa8521" // XXX: Noble Numbat
+  instance_type = "t4g.micro"
+  key_name      = aws_key_pair.augustfeng.key_name
+
+  instance_market_options {
+    market_type = "spot"
+  }
 }
