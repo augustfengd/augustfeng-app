@@ -362,7 +362,8 @@ resource "aws_instance" "simple-login" {
 }
 
 resource "aws_security_group" "simple-login" {
-  name = "simple-login"
+  name   = "simple-login"
+  vpc_id = aws_vpc.compute.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "simple-login-all" {
