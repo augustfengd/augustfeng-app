@@ -391,7 +391,7 @@ resource "aws_key_pair" "augustfeng" {
 }
 
 resource "aws_eip" "simple-login" {
-  instance = aws_instance.web.id
+  instance = aws_instance.simple-login.id
   domain   = "vpc"
 }
 
