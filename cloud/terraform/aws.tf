@@ -395,8 +395,10 @@ resource "aws_instance" "simple-login" {
   instance_type = "t4g.micro"
   key_name      = aws_key_pair.augustfeng.key_name
 
-  vpc_security_group_ids = [aws_security_group.simple-login.id]
-  subnet_id              = aws_subnet.compute-1a.id
+
+  vpc_security_group_ids      = [aws_security_group.simple-login.id]
+  subnet_id                   = aws_subnet.compute-1a.id
+  associate_public_ip_address = true
 
   instance_market_options {
     market_type = "spot"
