@@ -353,9 +353,28 @@ resource "aws_instance" "simple-login" {
   instance_type = "t4g.micro"
   key_name      = aws_key_pair.augustfeng.key_name
 
-  subnet_id = aws_subnet.compute-1a.id
+  vpc_security_group_ids = [aws_security_group.simple-login.id]
+  subnet_id              = aws_subnet.compute-1a.id
 
   instance_market_options {
     market_type = "spot"
   }
+}
+
+resource "aws_security_group" "simple-login" {
+  name = "simple-login"
+}
+
+resource "aws_vpc_security_group_egress_rule" "simple-login-all" {
+  security_group_id = aws_security_group.simple-login.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "simple-login-ssh" {
+  security_group_id = aws_security_group.simple-login.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
 }
