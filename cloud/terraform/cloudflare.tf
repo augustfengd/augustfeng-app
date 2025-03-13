@@ -9,7 +9,7 @@ resource "cloudflare_record" "aws" {
 resource "cloudflare_record" "simplelogin" {
   zone_id = var.cloudflare_zone_ids.augustfeng-app
   name    = "simplelogin"
-  content = aws_eip.simple-login.address
+  content = aws_eip.simple-login.public_ip
   type    = "A"
 }
 
