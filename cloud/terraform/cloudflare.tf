@@ -6,11 +6,20 @@ resource "cloudflare_record" "aws" {
   proxied = true
 }
 
-resource "cloudflare_record" "simplelogin-a" {
+resource "cloudflare_record" "simplelogin" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "augustfeng.email"
+  content = aws_eip.simple-login.public_ip
+  type    = "A"
+  proxied = false
+}
+
+resource "cloudflare_record" "simplelogin-app-a" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "app"
   content = aws_eip.simple-login.public_ip
   type    = "A"
+  proxied = true
 }
 
 resource "cloudflare_record" "simplelogin-mx" {
