@@ -72,3 +72,21 @@ resource "cloudflare_ruleset" "single_redirects" {
     }
   }
 }
+
+resource "tls_private_key" "simple-login" {
+  algorithm = "ED25519"
+}
+
+resource "tls_cert_request" "simple-login" {
+  private_key_pem = tls_private_key.simple-login.private_key_pem
+  subject {
+    common_name = cloudflare_record.simplelogin-app-a.hostname
+  }
+}
+
+resource "cloudflare_origin_ca_certificate" "simple-login" {
+  csr                = tls_cert_request.simple-login.cert_request_pem
+  hostnames          = [cloudflare_record.simplelogin-app-a.hostname]
+  request_type       = "origin-ecc"
+  requested_validity = 365
+}
