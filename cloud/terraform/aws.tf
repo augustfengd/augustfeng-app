@@ -427,3 +427,29 @@ resource "aws_vpc_security_group_ingress_rule" "simple-login-ssh" {
   to_port           = 22
   ip_protocol       = "tcp"
 }
+
+resource "aws_vpc_security_group_ingress_rule" "simple-login-http" {
+  // XXX: https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/#allowlist-cloudflare-ip-addresses
+  for_each = toset([
+    "173.245.48.0/20",
+    "103.21.244.0/22",
+    "103.22.200.0/22",
+    "103.31.4.0/22",
+    "141.101.64.0/18",
+    "108.162.192.0/18",
+    "190.93.240.0/20",
+    "188.114.96.0/20",
+    "197.234.240.0/22",
+    "198.41.128.0/17",
+    "162.158.0.0/15",
+    "104.16.0.0/13",
+    "104.24.0.0/14",
+    "172.64.0.0/13",
+    "131.0.72.0/22"
+  ])
+  security_group_id = aws_security_group.simple-login.id
+  cidr_ipv4         = each.value
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
