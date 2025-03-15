@@ -6,11 +6,19 @@ resource "cloudflare_record" "aws" {
   proxied = true
 }
 
-resource "cloudflare_record" "simplelogin" {
-  zone_id = var.cloudflare_zone_ids.augustfeng-app
-  name    = "simplelogin"
+resource "cloudflare_record" "simplelogin-a" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "app"
   content = aws_eip.simple-login.public_ip
   type    = "A"
+}
+
+resource "cloudflare_record" "simplelogin-mx" {
+  zone_id  = var.cloudflare_zone_ids.augustfeng-email
+  name     = "augustfeng.email"
+  content  = "app.augustfeng.email"
+  type     = "MX"
+  priority = 10
 }
 
 resource "cloudflare_ruleset" "single_redirects" {

@@ -9,7 +9,8 @@ variable "aws_identity_store_id" {
 
 variable "cloudflare_zone_ids" {
   type = object({
-    augustfeng-app = string
-    practicing-app = string
+    augustfeng-app   = string
+    practicing-app   = string
+    augustfeng-email = string
   })
 }

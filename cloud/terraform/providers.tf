@@ -6,7 +6,7 @@ terraform {
     }
     google = {
       source  = "hashicorp/google"
-      version = "4.68.0"
+      version = "6.25.0"
     }
     github = {
       source  = "integrations/github"
@@ -21,7 +21,7 @@ terraform {
       version = "4.51.0"
     }
     sops = {
-      source = "carlpett/sops"
+      source  = "carlpett/sops"
       version = "1.1.1"
     }
   }
