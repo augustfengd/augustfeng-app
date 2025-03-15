@@ -21,11 +21,25 @@ resource "cloudflare_record" "simplelogin-mx" {
   priority = 10
 }
 
-resource "cloudflare_record" "simplelogin-txt" {
-  zone_id  = var.cloudflare_zone_ids.augustfeng-email
-  name     = "dkim._domainkey.augustfeng.email"
-  content  = format("v=DKIM1; k=rsa; p=%s", data.sops_file.simple-login.data["dkimKeyPubWithoutGuard"])
-  type     = "TXT"
+resource "cloudflare_record" "simplelogin-dkim" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "dkim._domainkey.augustfeng.email"
+  content = format("v=DKIM1; k=rsa; p=%s", data.sops_file.simple-login.data["dkimKeyPubWithoutGuard"])
+  type    = "TXT"
+}
+
+resource "cloudflare_record" "simplelogin-spf" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "augustfeng.email"
+  content = "v=spf1 mx ~all"
+  type    = "TXT"
+}
+
+resource "cloudflare_record" "simplelogin-dmarc" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "_dmarc.augustfeng.email"
+  content = "v=DMARC1; p=quarantine; adkim=r; aspf=r"
+  type    = "TXT"
 }
 
 resource "cloudflare_ruleset" "single_redirects" {
