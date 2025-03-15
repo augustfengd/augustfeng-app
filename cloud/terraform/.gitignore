@@ -2,6 +2,7 @@
 secrets.json
 providers.json
 github-app.json
+simple-login.json
 
 # terraform
 .terraform/

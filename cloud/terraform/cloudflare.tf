@@ -21,6 +21,13 @@ resource "cloudflare_record" "simplelogin-mx" {
   priority = 10
 }
 
+resource "cloudflare_record" "simplelogin-txt" {
+  zone_id  = var.cloudflare_zone_ids.augustfeng-email
+  name     = "dkim._domainkey.augustfeng.email"
+  content  = format("v=DKIM1; k=rsa; p=%s", data.sops_file.simple-login.data["dkimKeyPubWithoutGuard"])
+  type     = "TXT"
+}
+
 resource "cloudflare_ruleset" "single_redirects" {
   zone_id     = var.cloudflare_zone_ids.augustfeng-app
   name        = "redirects"
