@@ -418,13 +418,39 @@ data "aws_ami" "al2023-arm64" {
   }
   filter {
     name   = "name"
-    values = ["al2023-ami-2023*"]
+    values = ["al2023-ami-2023.*"]
+  }
+}
+
+data "aws_ami" "al2023-ecs-arm64" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "architecture"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name"
+    values = ["al2023-ami-ecs-hvm-2023.*"]
   }
 }
 
 resource "aws_instance" "simple-login" {
   ami           = data.aws_ami.al2023-arm64.id
   instance_type = "t4g.small"
+  key_name      = aws_key_pair.augustfeng.key_name
+
+  vpc_security_group_ids = [aws_security_group.simple-login.id]
+  subnet_id              = aws_subnet.compute-1a.id
+
+  instance_market_options {
+    market_type = "spot"
+  }
+}
+
+resource "aws_instance" "debug" {
+  ami           = data.aws_ami.al2023-ecs-arm64.id
+  instance_type = "t4g.nano"
   key_name      = aws_key_pair.augustfeng.key_name
 
   vpc_security_group_ids = [aws_security_group.simple-login.id]
