@@ -395,11 +395,37 @@ resource "aws_eip" "simple-login" {
   domain   = "vpc"
 }
 
-resource "aws_instance" "simple-login" {
-  ami           = "ami-0c4e709339fa8521a" // XXX: Noble Numbat
-  instance_type = "t4g.micro"
-  key_name      = aws_key_pair.augustfeng.key_name
+# resource "aws_instance" "simple-login" {
+#   ami           = "ami-0c4e709339fa8521a" // XXX: Noble Numbat
+#   instance_type = "t4g.small"
+#   key_name      = aws_key_pair.augustfeng.key_name
 
+
+#   vpc_security_group_ids = [aws_security_group.simple-login.id]
+#   subnet_id              = aws_subnet.compute-1a.id
+
+#   instance_market_options {
+#     market_type = "spot"
+#   }
+# }
+
+data "aws_ami" "al2023-arm64" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "architecture"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023*"]
+  }
+}
+
+resource "aws_instance" "simple-login" {
+  ami           = data.aws_ami.al2023-arm64.id
+  instance_type = "t4g.small"
+  key_name      = aws_key_pair.augustfeng.key_name
 
   vpc_security_group_ids = [aws_security_group.simple-login.id]
   subnet_id              = aws_subnet.compute-1a.id
