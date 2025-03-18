@@ -1,0 +1,73 @@
+#+title: Checking out a pull request reference locally
+#+categories: programming
+#+tags[]: git
+#+date: [2025-03-18 Tue]
+
+* About
+
+The source code checked out in a github pull request merges with its target.
+
+* Refspecs
+
+When we checkout a git repository, the repository's configuration has a refspec
+configured so that all of the server's references in ~refs/heads/~ maps to our
+local ~.git/refs/remotes/origin/~ folder.
+
+#+begin_src toml
+[remote "origin"]
+        ...
+	fetch = +refs/heads/*:refs/remotes/origin/*
+#+end_src
+
+When I configure my repository forge integration, magit adds another refspec:
+
+#+begin_src toml
+[remote "origin"]
+        ...
+  fetch = +refs/pull/*/head:refs/pullreqs/*
+#+end_src
+
+* Git references for pull requests
+
+Before we continue, I must explainu that GitHub maintains a dedicated branch for
+each pull requests where the branch of the pull request is already merged with
+the base.
+
+This is what is checked out when we in the CI.
+
+These references are stored on the server's ~refs/pull~ folder.
+
+* Checking out a branch where the pull request is merged
+
+Now that we know there's a reference on the server that has the base branch
+merged, let's try to check it out.
+
+We can't simply run ~git checkout refs/pull/1~ since ~refs/pull/1~ is a specific
+to the server, not locally.
+
+Since it's been mapped to a local reference, we can do ~git checkout
+refs/pullreqs/1~ instead!
+
+* Effects
+
+If your pull request's branch is up to date and only has one commit, then the
+merged pull request branch will be linear and simple:
+
+#+begin_src shell
+git log -n2 --graph --oneline
+# * 34cc96194 (HEAD, origin/foobar, foobar) feat: bonjour
+# * f4ce741b9 (origin/main, origin/HEAD) feat: helloworld
+#+end_src
+
+If you only want to see a graph of the new commits being introduced by your pull
+request's branch:
+
+#+begin_src shell
+  git log origin/main..HEAD --graph --oneline --boundary # an 'o' indicates the merge base.
+#+end_src
+
+If you only want to get the files that have changed in the pull request:
+
+#+begin_src shell
+  git diff $(git merge-base origin/main HEAD)..HEAD --name-only
+#+end_src
