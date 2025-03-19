@@ -51,7 +51,7 @@ git log --oneline
 # ebd0cd6 a
 #+end_src
 
-* git fetch
+* git fetch --depth=n
 
 If we init another git repository and fetch with depth 1, we'll only the merge
 commit as expected.
@@ -89,4 +89,28 @@ part of the depth. To confirm this, we let's increase the fetch depth to 3:
   # | * 727dff6 x
   # * efb81f9 c
   # * 816ffa8 b
+#+end_src
+
+* git fetch --deepen=n
+
+Earlier we learned that a fetch with depth 2 will grab two commits from the
+branch that is merged in and will only get one additional commit besides the
+merge commit for the main branch.
+
+We can use ~git fetch --deepen=1~ to symetrically increase the depth:
+
+#+begin_src shell
+  git fetch --depth=1
+  git fetch --deepen=1
+#+end_src
+
+Disclaimer: this just did the same thing locally, but it did work as expected
+for github actions:
+
+#+begin_src shell
+  Run git log --oneline --graph
+  # *   2c0a785 Merge 19fd64007f39436152c677ce7e2bf0bac8bdd7ea into 5e6ed9a9caa59f2c33ac9f8e47875ef67ebe507a
+  # |\  
+  # | * 19fd640 <commit in branch>
+  # * 5e6ed9a <commit in main>
 #+end_src
