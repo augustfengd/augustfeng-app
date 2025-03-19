@@ -1,0 +1,92 @@
+#+title: git ordering
+
+* Commit history
+
+Let's say there is a commit history that is described by this graph, where x is
+older than b.
+
+#+begin_src text
+  v
+  | \
+  |  |
+  c  |
+  |  |
+  b  |
+  |  z
+  |  |
+  |  y
+  |  |
+  |  x
+  | /
+  a
+#+end_src
+
+* git log
+
+If we graph it then x will appear more recent.
+
+#+begin_src shell
+git log --oneline --graph
+# *   f9df10e Merge branch 'foobar'
+# |\  
+# | * 47992e4 z
+# | * 4ebdf15 y
+# | * 727dff6 x
+# * | efb81f9 c
+# * | 816ffa8 b
+# |/  
+# * ebd0cd6 a
+#+end_src
+
+If we however ask for it without graphing, then it's sorted chronologically.
+
+#+begin_src shell
+git log --oneline
+# f9df10e Merge branch 'foobar'
+# efb81f9 c
+# 816ffa8 b
+# 47992e4 z
+# 4ebdf15 y
+# 727dff6 x
+# ebd0cd6 a
+#+end_src
+
+* git fetch
+
+If we init another git repository and fetch with depth 1, we'll only the merge
+commit as expected.
+
+#+begin_src shell
+  git fetch --depth 1
+  git checkout main
+  git log
+  # f9df10e Merge branch 'foobar'
+#+end_src
+
+What's interesting is when we fetch with depth 2, the foobar branch will have
+two commits fetched (z and y) whereas the main branch only has c that is
+fetched.
+
+
+#+begin_src shell
+  git log --oneline --graph
+  # *   f9df10e Merge branch 'foobar'
+  # |\  
+  # | * 47992e4 z
+  # | * 4ebdf15 y
+  # * efb81f9 c
+#+end_src
+
+This is because the merge commit belongs to the main branch, so it's considered
+part of the depth. To confirm this, we let's increase the fetch depth to 3:
+
+#+begin_src shell
+  git log --oneline --graph
+  # *   f9df10e Merge branch 'foobar'
+  # |\  
+  # | * 47992e4 z
+  # | * 4ebdf15 y
+  # | * 727dff6 x
+  # * efb81f9 c
+  # * 816ffa8 b
+#+end_src
