@@ -519,3 +519,9 @@ resource "aws_secretsmanager_secret_version" "simple-login" {
     public_key  = tls_private_key.simple-login.public_key_pem
   })
 }
+
+resource "terraform_data" "aws-sesv2-put-account-details-production-access-enabled" {
+  provisioner "local-exec" {
+    command = format("aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url https://augustfeng.email --additional-contact-email-addresses augustfeng@augustfeng.email --contact-language EN", "augustfeng.email")
+  }
+}
