@@ -522,6 +522,6 @@ resource "aws_secretsmanager_secret_version" "simple-login" {
 
 resource "terraform_data" "aws-sesv2-put-account-details-production-access-enabled" {
   provisioner "local-exec" {
-    command = format("aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url https://augustfeng.email --additional-contact-email-addresses augustfeng@augustfeng.email --contact-language EN", "augustfeng.email")
+    command = "aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url https://augustfeng.email --additional-contact-email-addresses augustfeng@augustfeng.email --contact-language EN"
   }
 }
