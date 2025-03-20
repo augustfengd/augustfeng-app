@@ -525,3 +525,11 @@ resource "terraform_data" "aws-sesv2-put-account-details-production-access-enabl
     command = "aws sesv2 put-account-details --production-access-enabled --mail-type TRANSACTIONAL --website-url https://augustfeng.email --additional-contact-email-addresses augustfeng@augustfeng.email --contact-language EN"
   }
 }
+
+resource "aws_ses_domain_identity" "augustfeng-email" {
+  domain = "augustfeng.email"
+}
+
+resource "aws_ses_domain_dkim" "augustfeng-email" {
+  domain = aws_ses_domain_identity.augustfeng-email.domain
+}

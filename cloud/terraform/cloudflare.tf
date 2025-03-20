@@ -31,16 +31,17 @@ resource "cloudflare_record" "simplelogin-mx" {
 }
 
 resource "cloudflare_record" "simplelogin-dkim" {
+  count   = 3
   zone_id = var.cloudflare_zone_ids.augustfeng-email
-  name    = "dkim._domainkey.augustfeng.email"
-  content = format("v=DKIM1; k=rsa; p=%s", data.sops_file.simple-login.data["dkimKeyPubWithoutGuard"])
-  type    = "TXT"
+  name    = "${aws_ses_domain_dkim.augustfeng-email.dkim_tokens[count.index]}._domainkey"
+  content = "${aws_ses_domain_dkim.augustfeng-email.dkim_tokens[count.index]}.dkim.amazonses.com"
+  type    = "CNAME"
 }
 
 resource "cloudflare_record" "simplelogin-spf" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "augustfeng.email"
-  content = "v=spf1 mx ~all"
+  content = "v=spf1 include:amazonses.com ~all"
   type    = "TXT"
 }
 
