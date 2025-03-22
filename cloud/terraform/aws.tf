@@ -464,6 +464,14 @@ resource "aws_vpc_security_group_ingress_rule" "simple-login-ssh" {
   ip_protocol       = "tcp"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "simple-login-smtp" {
+  security_group_id = aws_security_group.simple-login.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 25
+  to_port           = 25
+  ip_protocol       = "tcp"
+}
+
 resource "aws_vpc_security_group_ingress_rule" "simple-login-http" {
   // XXX: https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/#allowlist-cloudflare-ip-addresses
   for_each = toset([
