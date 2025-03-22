@@ -429,6 +429,8 @@ resource "aws_instance" "simple-login" {
   vpc_security_group_ids = [aws_security_group.simple-login.id]
   subnet_id              = aws_subnet.compute-1a.id
 
+  hibernation = true
+
   root_block_device {
     encrypted   = true
     volume_size = 16
