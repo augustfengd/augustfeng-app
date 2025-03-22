@@ -25,7 +25,7 @@ resource "cloudflare_record" "simplelogin-app-a" {
 resource "cloudflare_record" "simplelogin-mx" {
   zone_id  = var.cloudflare_zone_ids.augustfeng-email
   name     = "augustfeng.email"
-  content  = "app.augustfeng.email"
+  content  = "augustfeng.email"
   type     = "MX"
   priority = 10
 }
