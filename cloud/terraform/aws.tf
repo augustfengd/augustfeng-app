@@ -390,8 +390,8 @@ resource "aws_key_pair" "augustfeng" {
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
 }
 
-resource "aws_eip" "simple-login" {
-  // instance = aws_instance.simple-login.id
+resource "aws_eip" "simplelogin" {
+  instance = aws_instance.simplelogin.id
   domain   = "vpc"
 }
 
@@ -421,58 +421,58 @@ data "aws_ami" "al2023-ecs-arm64" {
   }
 }
 
-# resource "aws_instance" "simple-login" {
-#   ami           = data.aws_ami.al2023-arm64.id
-#   instance_type = "t4g.small"
-#   key_name      = aws_key_pair.augustfeng.key_name
+resource "aws_instance" "simplelogin" {
+  ami           = data.aws_ami.al2023-arm64.id
+  instance_type = "t4g.small"
+  key_name      = aws_key_pair.augustfeng.key_name
 
-#   vpc_security_group_ids = [aws_security_group.simple-login.id]
-#   subnet_id              = aws_subnet.compute-1a.id
+  vpc_security_group_ids = [aws_security_group.simplelogin.id]
+  subnet_id              = aws_subnet.compute-1a.id
 
-#   hibernation = true
+  hibernation = true
 
-#   root_block_device {
-#     encrypted   = true
-#     volume_size = 16
-#   }
+  root_block_device {
+    encrypted   = true
+    volume_size = 16
+  }
 
-#   instance_market_options {
-#     market_type = "spot"
-#     spot_options {
-#       instance_interruption_behavior = "hibernate"
-#       spot_instance_type             = "persistent"
-#     }
-#   }
-# }
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      instance_interruption_behavior = "hibernate"
+      spot_instance_type             = "persistent"
+    }
+  }
+}
 
-resource "aws_security_group" "simple-login" {
-  name   = "simple-login"
+resource "aws_security_group" "simplelogin" {
+  name   = "simplelogin"
   vpc_id = aws_vpc.compute.id
 }
 
-resource "aws_vpc_security_group_egress_rule" "simple-login-all" {
-  security_group_id = aws_security_group.simple-login.id
+resource "aws_vpc_security_group_egress_rule" "simplelogin-all" {
+  security_group_id = aws_security_group.simplelogin.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "simple-login-ssh" {
-  security_group_id = aws_security_group.simple-login.id
+resource "aws_vpc_security_group_ingress_rule" "simplelogin-ssh" {
+  security_group_id = aws_security_group.simplelogin.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 22
   to_port           = 22
   ip_protocol       = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "simple-login-smtp" {
-  security_group_id = aws_security_group.simple-login.id
+resource "aws_vpc_security_group_ingress_rule" "simplelogin-smtp" {
+  security_group_id = aws_security_group.simplelogin.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 25
   to_port           = 25
   ip_protocol       = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "simple-login-http" {
+resource "aws_vpc_security_group_ingress_rule" "simplelogin-http" {
   // XXX: https://developers.cloudflare.com/fundamentals/concepts/cloudflare-ip-addresses/#allowlist-cloudflare-ip-addresses
   for_each = toset([
     "173.245.48.0/20",
@@ -491,23 +491,23 @@ resource "aws_vpc_security_group_ingress_rule" "simple-login-http" {
     "172.64.0.0/13",
     "131.0.72.0/22"
   ])
-  security_group_id = aws_security_group.simple-login.id
+  security_group_id = aws_security_group.simplelogin.id
   cidr_ipv4         = each.value
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"
 }
 
-resource "aws_secretsmanager_secret" "simple-login" {
-  name = "simple-login"
+resource "aws_secretsmanager_secret" "simplelogin" {
+  name = "simplelogin"
 }
 
-resource "aws_secretsmanager_secret_version" "simple-login" {
-  secret_id = aws_secretsmanager_secret.simple-login.id
+resource "aws_secretsmanager_secret_version" "simplelogin" {
+  secret_id = aws_secretsmanager_secret.simplelogin.id
   secret_string = jsonencode({
-    certificate   = cloudflare_origin_ca_certificate.simple-login.certificate
-    private_key   = tls_private_key.simple-login.private_key_pem
-    public_key    = tls_private_key.simple-login.public_key_pem
+    certificate   = cloudflare_origin_ca_certificate.simplelogin.certificate
+    private_key   = tls_private_key.simplelogin.private_key_pem
+    public_key    = tls_private_key.simplelogin.public_key_pem
     smtp_username = aws_iam_access_key.augustfeng-email-simplelogin.id
     smtp_password = aws_iam_access_key.augustfeng-email-simplelogin.ses_smtp_password_v4
   })
