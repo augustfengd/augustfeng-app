@@ -390,10 +390,10 @@ resource "aws_key_pair" "augustfeng" {
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
 }
 
-# resource "aws_eip" "simple-login" {
-#   instance = aws_instance.simple-login.id
-#   domain   = "vpc"
-# }
+resource "aws_eip" "simple-login" {
+  // instance = aws_instance.simple-login.id
+  domain   = "vpc"
+}
 
 data "aws_ami" "al2023-arm64" {
   most_recent = true
