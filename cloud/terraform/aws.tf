@@ -390,11 +390,6 @@ resource "aws_key_pair" "augustfeng" {
   public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
 }
 
-resource "aws_eip" "simplelogin" {
-  instance = aws_instance.simplelogin.id
-  domain   = "vpc"
-}
-
 data "aws_ami" "al2023-arm64" {
   most_recent = true
   owners      = ["amazon"]
@@ -421,29 +416,34 @@ data "aws_ami" "al2023-ecs-arm64" {
   }
 }
 
-resource "aws_instance" "simplelogin" {
-  ami           = data.aws_ami.al2023-arm64.id
-  instance_type = "t4g.small"
-  key_name      = aws_key_pair.augustfeng.key_name
-
-  vpc_security_group_ids = [aws_security_group.simplelogin.id]
-  subnet_id              = aws_subnet.compute-1a.id
-
-  hibernation = true
-
-  root_block_device {
-    encrypted   = true
-    volume_size = 16
-  }
-
-  instance_market_options {
-    market_type = "spot"
-    spot_options {
-      instance_interruption_behavior = "hibernate"
-      spot_instance_type             = "persistent"
-    }
-  }
+resource "aws_eip" "simplelogin" {
+  // instance = aws_instance.simplelogin.id
+  domain   = "vpc"
 }
+
+# resource "aws_instance" "simplelogin" {
+#   ami           = data.aws_ami.al2023-arm64.id
+#   instance_type = "t4g.small"
+#   key_name      = aws_key_pair.augustfeng.key_name
+
+#   vpc_security_group_ids = [aws_security_group.simplelogin.id]
+#   subnet_id              = aws_subnet.compute-1a.id
+
+#   hibernation = true
+
+#   root_block_device {
+#     encrypted   = true
+#     volume_size = 16
+#   }
+
+#   instance_market_options {
+#     market_type = "spot"
+#     spot_options {
+#       instance_interruption_behavior = "hibernate"
+#       spot_instance_type             = "persistent"
+#     }
+#   }
+# }
 
 resource "aws_security_group" "simplelogin" {
   name   = "simplelogin"
