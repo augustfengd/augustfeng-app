@@ -535,5 +535,5 @@ data "aws_iam_policy_document" "augustfeng-email-simplelogin" {
 resource "aws_iam_user_policy" "augustfeng-email-simplelogin" {
   name   = "Application"
   user   = aws_iam_user.augustfeng-email-simplelogin.name
-  policy = data.aws_iam_policy_document.augustfeng-email-simplelogin
+  policy = data.aws_iam_policy_document.augustfeng-email-simplelogin.json
 }
