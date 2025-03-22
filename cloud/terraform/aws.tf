@@ -417,33 +417,30 @@ data "aws_ami" "al2023-ecs-arm64" {
 }
 
 resource "aws_eip" "simplelogin" {
-  // instance = aws_instance.simplelogin.id
+  instance = aws_instance.simplelogin.id
   domain   = "vpc"
 }
 
-# resource "aws_instance" "simplelogin" {
-#   ami           = data.aws_ami.al2023-arm64.id
-#   instance_type = "t4g.small"
-#   key_name      = aws_key_pair.augustfeng.key_name
+resource "aws_instance" "simplelogin" {
+  ami           = data.aws_ami.al2023-arm64.id
+  instance_type = "t4g.small"
+  key_name      = aws_key_pair.augustfeng.key_name
 
-#   vpc_security_group_ids = [aws_security_group.simplelogin.id]
-#   subnet_id              = aws_subnet.compute-1a.id
+  vpc_security_group_ids = [aws_security_group.simplelogin.id]
+  subnet_id              = aws_subnet.compute-1a.id
 
-#   hibernation = true
+  root_block_device {
+    encrypted   = true
+    volume_size = 16
+  }
 
-#   root_block_device {
-#     encrypted   = true
-#     volume_size = 16
-#   }
-
-#   instance_market_options {
-#     market_type = "spot"
-#     spot_options {
-#       instance_interruption_behavior = "hibernate"
-#       spot_instance_type             = "persistent"
-#     }
-#   }
-# }
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      spot_instance_type = "persistent"
+    }
+  }
+}
 
 resource "aws_security_group" "simplelogin" {
   name   = "simplelogin"
