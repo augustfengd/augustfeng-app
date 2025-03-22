@@ -437,6 +437,7 @@ resource "aws_instance" "simple-login" {
     market_type = "spot"
     spot_options {
       instance_interruption_behavior = "hibernate"
+      spot_instance_type             = "persistent"
     }
   }
 }
