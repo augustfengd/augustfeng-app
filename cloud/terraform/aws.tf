@@ -495,9 +495,11 @@ resource "aws_secretsmanager_secret" "simple-login" {
 resource "aws_secretsmanager_secret_version" "simple-login" {
   secret_id = aws_secretsmanager_secret.simple-login.id
   secret_string = jsonencode({
-    certificate = cloudflare_origin_ca_certificate.simple-login.certificate
-    private_key = tls_private_key.simple-login.private_key_pem
-    public_key  = tls_private_key.simple-login.public_key_pem
+    certificate   = cloudflare_origin_ca_certificate.simple-login.certificate
+    private_key   = tls_private_key.simple-login.private_key_pem
+    public_key    = tls_private_key.simple-login.public_key_pem
+    smtp_username = aws_iam_access_key.augustfeng-email.name
+    smtp_password = aws_iam_access_key.augustfeng-email.ses_smtp_password_v4
   })
 }
 
@@ -513,4 +515,25 @@ resource "aws_ses_domain_identity" "augustfeng-email" {
 
 resource "aws_ses_domain_dkim" "augustfeng-email" {
   domain = aws_ses_domain_identity.augustfeng-email.domain
+}
+
+resource "aws_iam_user" "augustfeng-email-simplelogin" {
+  name = "augustfeng-email-simplelogin"
+}
+
+resource "aws_iam_access_key" "augustfeng-email" {
+  user = aws_iam_user.augustfeng-email.name
+}
+
+data "aws_iam_policy_document" "augustfeng-email-simplelogin" {
+  statement {
+    actions   = ["ses:SendRawEmail"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_user_policy" "augustfeng-email-simplelogin" {
+  name   = "Application"
+  user   = aws_iam_user.augustfeng-email-simplelogin.name
+  policy = data.aws_iam_policy_document.augustfeng-email-simplelogin
 }
