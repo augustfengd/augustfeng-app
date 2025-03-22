@@ -522,7 +522,7 @@ resource "aws_iam_user" "augustfeng-email-simplelogin" {
 }
 
 resource "aws_iam_access_key" "augustfeng-email" {
-  user = aws_iam_user.augustfeng-email.name
+  user = aws_iam_user.augustfeng-email-simplelogin.name
 }
 
 data "aws_iam_policy_document" "augustfeng-email-simplelogin" {
