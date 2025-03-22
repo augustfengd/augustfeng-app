@@ -429,6 +429,10 @@ resource "aws_instance" "simple-login" {
   vpc_security_group_ids = [aws_security_group.simple-login.id]
   subnet_id              = aws_subnet.compute-1a.id
 
+  root_block_device {
+    encrypted = true
+  }
+
   instance_market_options {
     market_type = "spot"
     spot_options {
