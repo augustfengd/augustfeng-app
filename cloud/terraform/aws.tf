@@ -437,7 +437,8 @@ resource "aws_instance" "simplelogin" {
   instance_market_options {
     market_type = "spot"
     spot_options {
-      spot_instance_type = "persistent"
+      instance_interruption_behavior = "stop"
+      spot_instance_type             = "persistent"
     }
   }
 }
