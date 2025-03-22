@@ -498,8 +498,8 @@ resource "aws_secretsmanager_secret_version" "simple-login" {
     certificate   = cloudflare_origin_ca_certificate.simple-login.certificate
     private_key   = tls_private_key.simple-login.private_key_pem
     public_key    = tls_private_key.simple-login.public_key_pem
-    smtp_username = aws_iam_access_key.augustfeng-email.name
-    smtp_password = aws_iam_access_key.augustfeng-email.ses_smtp_password_v4
+    smtp_username = aws_iam_access_key.augustfeng-email-simplelogin.name
+    smtp_password = aws_iam_access_key.augustfeng-email-simplelogin.ses_smtp_password_v4
   })
 }
 
