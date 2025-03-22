@@ -430,7 +430,8 @@ resource "aws_instance" "simple-login" {
   subnet_id              = aws_subnet.compute-1a.id
 
   root_block_device {
-    encrypted = true
+    encrypted   = true
+    volume_size = 16
   }
 
   instance_market_options {
