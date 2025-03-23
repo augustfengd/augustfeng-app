@@ -1,0 +1,181 @@
+---
+- name: Install dnf packages
+  hosts: all
+  become: true
+  tasks:
+  - name: install docker package
+    ansible.builtin.dnf:
+      name:
+      - docker
+    notify: docker
+  - name: install postfix
+    ansible.builtin.dnf:
+      name:
+      - postfix
+      - postfix-pgsql
+    notify: postfix
+  - name: install nginx
+    ansible.builtin.dnf:
+      name:
+      - nginx
+    notify: nginx
+  - name: install bind
+    ansible.builtin.dnf:
+      name:
+      - bind
+    notify: bind
+  handlers:
+  - name: postfix
+    ansible.builtin.systemd_service:
+      state: started
+      name: postfix
+  - name: docker
+    systemd:
+      state: started
+      name: docker
+  - name: nginx
+    ansible.builtin.systemd_service:
+      state: started
+      name: nginx
+  - name: bind
+    ansible.builtin.systemd_service:
+      state: started
+      name: named
+
+- name: Install docker compose plugin
+  hosts: all
+  become: true
+  tasks:
+  - name: download docker-compose binary
+    get_url:
+      url: "https://github.com/docker/compose/releases/download/v2.34.0/docker-compose-linux-aarch64"
+      dest: "/usr/libexec/docker/cli-plugins/docker-compose"
+      mode: '+x'
+
+- name: Configure docker
+  hosts: all
+  become: true
+  tasks:
+  - name: add ec2-user to docker group
+    ansible.builtin.user:
+      name: ec2-user
+      groups: docker
+      append: yes
+
+- name: configure postfix
+  hosts: all
+  become: yes
+  tasks:
+  - name: main.cf
+    ansible.builtin.copy:
+      src: postfix/main.cf
+      dest: /etc/postfix/main.cf
+    notify: postfix
+  - name: pgsql-relay-domains.cf
+    ansible.builtin.copy:
+      src: postfix/pgsql-relay-domains.cf
+      dest: /etc/postfix/pgsql-relay-domains.cf
+    notify: postfix
+  - name: pgsql-transport-maps.cf
+    ansible.builtin.copy:
+      src: postfix/pgsql-transport-maps.cf
+      dest: /etc/postfix/pgsql-transport-maps.cf
+    notify: postfix
+  handlers:
+  - name: postfix
+    ansible.builtin.systemd_service:
+      state: restarted
+      name: postfix
+
+- name: Generate and deploy SSL certificate
+  hosts: all
+  become: yes
+  tasks:
+    - name: create /etc/ssl/private
+      ansible.builtin.file:
+        path: /etc/ssl/private
+        state: directory
+        mode: '0755'
+      notify: postfix
+    - name: Generate private key
+      community.crypto.openssl_privatekey:
+        path: /etc/ssl/private/ssl-cert-snakeoil.key
+        size: 2048
+        type: RSA
+        state: present
+      notify: postfix
+    - name: Generate SSL certificate
+      community.crypto.x509_certificate:
+        path: /etc/ssl/certs/ssl-cert-snakeoil.pem
+        privatekey_path: /etc/ssl/private/ssl-cert-snakeoil.key
+        provider: selfsigned
+      notify: postfix
+  handlers:
+  - name: postfix
+    ansible.builtin.systemd_service:
+      state: restarted
+      name: postfix
+
+- name: copy docker compose configuration
+  hosts: all
+  become: yes
+  tasks:
+  - name: mkdir
+    ansible.builtin.file:
+      path: /etc/simplelogin
+      state: directory
+      mode: '0755'
+  - name: compose.yaml
+    ansible.builtin.copy:
+      src: compose.yaml
+      dest: /etc/simplelogin/compose.yaml
+
+- name: create sl directories
+  hosts: all
+  become: yes
+  tasks:
+  - name: pgp
+    ansible.builtin.file:
+      path: /var/lib/simplelogin/pgp
+      state: directory
+      mode: '0755'
+  - name: db
+    ansible.builtin.file:
+      path: /var/lib/simplelogin/db
+      state: directory
+      mode: '0755'
+  - name: upload
+    ansible.builtin.file:
+      path: /var/lib/simplelogin/upload
+      state: directory
+      mode: '0755'
+
+- name: copy simplelogin configuration
+  hosts: all
+  become: yes
+  tasks:
+  - name: mkdir
+    ansible.builtin.file:
+      path: /etc/simplelogin
+      state: directory
+      mode: '0755'
+  - name: simplelogin.env
+    ansible.builtin.copy:
+      src: simplelogin/simplelogin.env
+      dest: /etc/simplelogin/simplelogin.env
+
+- name: configure nginx configuration
+  hosts: all
+  become: yes
+  tasks:
+  - name: app.augustfeng.email.conf
+    ansible.builtin.copy:
+      src: nginx/app.augustfeng.email.conf
+      dest: /etc/nginx/conf.d/app.augustfeng.email.conf
+    notify: Restart nginx
+  handlers:
+    - name: Restart nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
+        enabled: yes

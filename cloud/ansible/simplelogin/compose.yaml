@@ -1,0 +1,88 @@
+services:
+  app:
+    image: simplelogin/app:3.4.0
+    volumes:
+      - /var/lib/simplelogin:/sl
+      - /var/lib/simplelogin/upload:/code/static/upload
+      - /etc/simplelogin/simplelogin.env:/code/.env
+    ports:
+      - "127.0.0.1:7777:7777"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    depends_on:
+      init:
+        condition: service_completed_successfully
+  email_handler:
+    image: simplelogin/app:3.4.0
+    command:
+      - python
+      - email_handler.py
+    volumes:
+      - /var/lib/simplelogin:/sl
+      - /var/lib/simplelogin/upload:/code/static/upload
+      - /etc/simplelogin/simplelogin.env:/code/.env
+    ports:
+      - "127.0.0.1:20381:20381"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+    depends_on:
+      init:
+        condition: service_completed_successfully
+  job_runner:
+    image: simplelogin/app:3.4.0
+    command:
+      - python
+      - job_runner.py
+    volumes:
+      - /var/lib/simplelogin:/sl
+      - /var/lib/simplelogin/upload:/code/static/upload
+      - /etc/simplelogin/simplelogin.env:/code/.env
+    restart: always
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  # infrastructure
+  database:
+    image: postgres:12.1
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: root
+      POSTGRES_DB: simplelogin
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /var/lib/simplelogin/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=root --dbname=simplelogin"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+  migrate:
+    image: simplelogin/app:3.4.0
+    command:
+      - flask
+      - db
+      - upgrade
+    volumes:
+      - /var/lib/simplelogin:/sl
+      - /var/lib/simplelogin/upload:/code/static/upload
+      - /etc/simplelogin/simplelogin.env:/code/.env
+    depends_on:
+      database:
+        condition: service_healthy
+  init:
+    image: simplelogin/app:3.4.0
+    command:
+      - python
+      - init_app.py
+    volumes:
+      - /var/lib/simplelogin:/sl
+      - /var/lib/simplelogin/upload:/code/static/upload
+      - /etc/simplelogin/simplelogin.env:/code/.env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
