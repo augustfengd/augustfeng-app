@@ -521,6 +521,11 @@ resource "aws_ses_domain_identity" "augustfeng-email" {
   domain = "augustfeng.email"
 }
 
+resource "aws_ses_domain_mail_from" "augustfeng-email" {
+  domain           = aws_ses_domain_identity.augustfeng-email.domain
+  mail_from_domain = format("bounce.%s", aws_ses_domain_identity.augustfeng-email.domain)
+}
+
 resource "aws_ses_domain_dkim" "augustfeng-email" {
   domain = aws_ses_domain_identity.augustfeng-email.domain
 }
