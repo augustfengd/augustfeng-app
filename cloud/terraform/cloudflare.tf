@@ -33,7 +33,7 @@ resource "cloudflare_record" "simplelogin-mx" {
 resource "cloudflare_record" "simplelogin-amazonses" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "_amazonses.augustfeng.email"
-  content = aws_ses_domain_identity.augustfeng-email.verification_token # XXX: this was added after the domain identity was verified; i'm curious.
+  content = format("\"%s\"", aws_ses_domain_identity.augustfeng-email.verification_token) # XXX: this was added after the domain identity was verified; i'm curious.
   type    = "TXT"
 }
 
@@ -48,14 +48,14 @@ resource "cloudflare_record" "simplelogin-dkim" {
 resource "cloudflare_record" "simplelogin-spf" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "augustfeng.email"
-  content = "v=spf1 include:amazonses.com ~all"
+  content = format("\"%s\"", "v=spf1 include:amazonses.com ~all")
   type    = "TXT"
 }
 
 resource "cloudflare_record" "simplelogin-dmarc" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "_dmarc.augustfeng.email"
-  content = "v=DMARC1; p=reject; adkim=s; aspf=s"
+  content = format("\"%s\"", "v=DMARC1; p=reject; adkim=s; aspf=s")
   type    = "TXT"
 }
 
