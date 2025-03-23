@@ -52,10 +52,25 @@ resource "cloudflare_record" "simplelogin-spf" {
   type    = "TXT"
 }
 
+resource "cloudflare_record" "simplelogin-bounce-mx" {
+  zone_id  = var.cloudflare_zone_ids.augustfeng-email
+  name     = "bounce.augustfeng.email"
+  content  = "feedback-smtp.us-east-1.amazonses.com"
+  type     = "MX"
+  priority = 10
+}
+
+resource "cloudflare_record" "simplelogin-bounce-spf" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "bounce.augustfeng.email"
+  content = format("\"%s\"", "v=spf1 include:amazonses.com ~all")
+  type    = "TXT"
+}
+
 resource "cloudflare_record" "simplelogin-dmarc" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "_dmarc.augustfeng.email"
-  content = format("\"%s\"", "v=DMARC1; p=reject; adkim=s; aspf=s")
+  content = format("\"%s\"", "v=DMARC1; p=reject; adkim=s; aspf=r")
   type    = "TXT"
 }
 
