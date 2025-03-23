@@ -81,6 +81,11 @@
       src: postfix/pgsql-transport-maps.cf
       dest: /etc/postfix/pgsql-transport-maps.cf
     notify: postfix
+  - name: sasl_passwd
+    ansible.builtin.copy:
+      src: postfix/sasl_passwd
+      dest: /etc/postfix/sasl_passwd
+    notify: postfix
   handlers:
   - name: postfix
     ansible.builtin.systemd_service:
