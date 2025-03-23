@@ -16,7 +16,7 @@ resource "cloudflare_record" "simplelogin" {
 
 resource "cloudflare_record" "simplelogin-app-a" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
-  name    = "app"
+  name    = "app.augustfeng.email"
   content = aws_eip.simplelogin.public_ip
   type    = "A"
   proxied = true
@@ -28,6 +28,13 @@ resource "cloudflare_record" "simplelogin-mx" {
   content  = "augustfeng.email"
   type     = "MX"
   priority = 10
+}
+
+resource "cloudflare_record" "simplelogin-amazonses" {
+  zone_id = var.cloudflare_zone_ids.augustfeng-email
+  name    = "_amazonses.augustfeng.email"
+  content = aws_ses_domain_identity.augustfeng-email.verification_token # XXX: this was added after the domain identity was verified; i'm curious.
+  type    = "TXT"
 }
 
 resource "cloudflare_record" "simplelogin-dkim" {
