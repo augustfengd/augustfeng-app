@@ -55,7 +55,7 @@ resource "cloudflare_record" "simplelogin-spf" {
 resource "cloudflare_record" "simplelogin-dmarc" {
   zone_id = var.cloudflare_zone_ids.augustfeng-email
   name    = "_dmarc.augustfeng.email"
-  content = "v=DMARC1; p=quarantine; adkim=r; aspf=r"
+  content = "v=DMARC1; p=reject; adkim=s; aspf=s"
   type    = "TXT"
 }
 
