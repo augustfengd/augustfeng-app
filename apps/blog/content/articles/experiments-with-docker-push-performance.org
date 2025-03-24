@@ -1,0 +1,219 @@
+#+title: Experiments with docker push performance
+#+categories: docker
+#+date: [2025-03-23 Sun]
+#+draft: true
+
+* About
+
+If an container images contains many layers, and we pull before building.. do we
+optimize?
+
+#+begin_src dockerfile
+FROM debian
+
+COPY file-1.bin file-2.bin file-3.bin file-4.bin .
+
+RUN md5sum file-1.bin > file-1.bin.md5sum && sleep 4
+
+RUN md5sum file-2.bin > file-2.bin.md5sum && sleep 4
+
+RUN md5sum file-3.bin > file-3.bin.md5sum && sleep 4
+
+RUN md5sum file-4.bin > file-4.bin.md5sum && sleep 4
+#+end_src
+
+After tagging it with the eventual container image an inspection will give us this:
+
+#+begin_src json
+  [
+      {
+          "Id": "sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+          "RepoTags": [
+              "654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng:1",
+              "learn:latest"
+          ],
+          "RepoDigests": [
+              "654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng@sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+              "learn@sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1"
+          ],
+          "Parent": "",
+          "Comment": "buildkit.dockerfile.v0",
+          "Created": "2025-03-24T02:58:54.047266469Z",
+          "DockerVersion": "",
+          "Author": "",
+          "Config": {
+              "Hostname": "",
+              "Domainname": "",
+              "User": "",
+              "AttachStdin": false,
+              "AttachStdout": false,
+              "AttachStderr": false,
+              "Tty": false,
+              "OpenStdin": false,
+              "StdinOnce": false,
+              "Env": [
+                  "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              ],
+              "Cmd": [
+                  "bash"
+              ],
+              "Image": "",
+              "Volumes": null,
+              "WorkingDir": "",
+              "Entrypoint": null,
+              "OnBuild": null,
+              "Labels": null
+          },
+          "Architecture": "arm64",
+          "Variant": "v8",
+          "Os": "linux",
+          "Size": 585344718,
+          "GraphDriver": {
+              "Data": null,
+              "Name": "overlayfs"
+          },
+          "RootFS": {
+              "Type": "layers",
+              "Layers": [
+                  "sha256:948048d45864d1f64cd70b0341fd6c927cd3fa13f1d56b0054064b3ba2b2b467",
+                  "sha256:4c6c9b3692fa7975fbfb38c821f17c74585fb7a07b12b12133242b0f1524b7a5",
+                  "sha256:77dc842798eabff50a72c503eb7534a9bd5f434db1ad16a59daa7b8fbf1c61da",
+                  "sha256:5d79ffb1fe65ac0a5ff4c2cc9c0544378cf4700202db34b13bee341f6432929d",
+                  "sha256:dfdcbd901460478221f7762d7431ed59aff13852ee8138b34d45f74c4984748e",
+                  "sha256:0d021d298b8655ec0fe9a8197db906e23b04717811f4253da1a9c857525d6a10"
+              ]
+          },
+          "Metadata": {
+              "LastTagTime": "2025-03-24T02:59:32.023389167Z"
+          },
+          "Descriptor": {
+              "mediaType": "application/vnd.oci.image.index.v1+json",
+              "digest": "sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+              "size": 856
+          }
+      }
+  ]
+#+end_src
+
+The pushing logs will say this:
+
+#+begin_src shell
+  docker push 654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng:1
+  # The push refers to repository [654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng]
+  # 18a205207405: Pushed
+  # 545aa82ec479: Layer already exists
+  # 286cc89c045b: Pushed
+  # adb244b92ba9: Pushed
+  # 15a4b06ec5d7: Pushed
+  # 0c1977a3dcc1: Pushed
+  # b6d5d0dc70a3: Pushed
+  # 1: digest: sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1 size: 856
+#+end_src
+
+After a push, we see this on the ECR repository. The image id with the
+~{"imageDigest":
+"sha256:sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1" }~
+appears as an *Image Index* and the others appear as *Image*.
+
+#+begin_src json
+  {
+      "imageIds": [
+          {
+              "imageDigest": "sha256:58edecafacd489326725032827c6c351c2d2d0219d6257e899f80471d0f2fddd"
+          },
+          {
+              "imageDigest": "sha256:a815db073e98429e7ce24fd702357661bcd271753195900bdcc2870b14e8000e"
+          },
+          {
+              "imageDigest": "sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+              "imageTag": "1"
+          }
+      ]
+  }
+#+end_src
+
+When we docker system prune -a, we see: XXX.
+
+After a ~docker pull
+654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng:1~ and tagging it
+with learn:latest, we can compare that container image against our previously
+locally built one.
+
+#+begin_src diff
+60c60
+<             "LastTagTime": "2025-03-24T02:59:32.023389167Z"
+---
+>             "LastTagTime": "2025-03-24T03:06:51.97722751Z"
+#+end_src
+
+If we rebuild the container image, we won't have any caches though:
+
+#+begin_src shell
+make image
+#docker build --tag learn .
+#[+] Building 27.4s (11/11) FINISHED                                                                                                                                                                                                                                                                        docker:desktop-linux
+# => [internal] load build definition from dockerfile                                                                                                                                                                                                                                                                       0.0s
+# => => transferring dockerfile: 319B                                                                                                                                                                                                                                                                                       0.0s
+# => [internal] load metadata for docker.io/library/debian:latest                                                                                                                                                                                                                                                           0.7s
+# => [internal] load .dockerignore                                                                                                                                                                                                                                                                                          0.0s
+# => => transferring context: 2B                                                                                                                                                                                                                                                                                            0.0s
+# => [internal] load build context                                                                                                                                                                                                                                                                                          1.3s
+# => => transferring context: 536.99MB                                                                                                                                                                                                                                                                                      1.3s
+# => [1/6] FROM docker.io/library/debian:latest@sha256:18023f131f52fc3ea21973cabffe0b216c60b417fd2478e94d9d59981ebba6af                                                                                                                                                                                                     0.0s
+# => => resolve docker.io/library/debian:latest@sha256:18023f131f52fc3ea21973cabffe0b216c60b417fd2478e94d9d59981ebba6af                                                                                                                                                                                                     0.0s
+# => [2/6] COPY file-1.bin file-2.bin file-3.bin file-4.bin .                                                                                                                                                                                                                                                               0.4s
+# => [3/6] RUN md5sum file-1.bin > file-1.bin.md5sum && sleep 4                                                                                                                                                                                                                                                             4.3s
+# => [4/6] RUN md5sum file-2.bin > file-2.bin.md5sum && sleep 4                                                                                                                                                                                                                                                             4.4s
+# => [5/6] RUN md5sum file-3.bin > file-3.bin.md5sum && sleep 4                                                                                                                                                                                                                                                             4.3s
+# => [6/6] RUN md5sum file-4.bin > file-4.bin.md5sum && sleep 4                                                                                                                                                                                                                                                             4.3s
+# => exporting to image                                                                                                                                                                                                                                                                                                     7.6s
+# => => exporting layers                                                                                                                                                                                                                                                                                                    7.6s
+# => => exporting manifest sha256:abbce2cfff4ad6e3260e257362dd99945546b368aa857790f2211718ef63619a                                                                                                                                                                                                                          0.0s
+# => => exporting config sha256:0d1bc98a671d0ed2633b25216072a375faedfaa595e62f61db8df8651eb332db                                                                                                                                                                                                                            0.0s
+# => => exporting attestation manifest sha256:d02c10c7f17bb2ee1b6703c54081afafd60dfd4d3673389d68846ea6bbe9830b                                                                                                                                                                                                              0.0s
+# => => exporting manifest list sha256:4fdaf30126c26e30ed46cfbc2432d1a7d8ba7305d5cd897a6ea68a995f63aae6                                                                                                                                                                                                                     0.0s
+# => => naming to docker.io/library/learn:latest                                                                                                                                                                                                                                                                            0.0s
+# => => unpacking to docker.io/library/learn:latest                                                                                                                                                                                                                                                                         0.0s
+#+end_src
+
+The rebuilt container does not have the same sha as the original one.
+
+#+begin_src diff
+3c3
+<         "Id": "sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+---
+>         "Id": "sha256:4fdaf30126c26e30ed46cfbc2432d1a7d8ba7305d5cd897a6ea68a995f63aae6",
+5d4
+<             "654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng:1",
+9,10c8
+<             "654654412147.dkr.ecr.ca-central-1.amazonaws.com/augustfeng@sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+<             "learn@sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1"
+---
+>             "learn@sha256:4fdaf30126c26e30ed46cfbc2432d1a7d8ba7305d5cd897a6ea68a995f63aae6"
+14c12
+<         "Created": "2025-03-24T02:58:54.047266469Z",
+---
+>         "Created": "2025-03-24T03:07:47.469237924Z",
+43c41
+<         "Size": 585344718,
+---
+>         "Size": 585344715,
+53,56c51,54
+<                 "sha256:77dc842798eabff50a72c503eb7534a9bd5f434db1ad16a59daa7b8fbf1c61da",
+<                 "sha256:5d79ffb1fe65ac0a5ff4c2cc9c0544378cf4700202db34b13bee341f6432929d",
+<                 "sha256:dfdcbd901460478221f7762d7431ed59aff13852ee8138b34d45f74c4984748e",
+<                 "sha256:0d021d298b8655ec0fe9a8197db906e23b04717811f4253da1a9c857525d6a10"
+---
+>                 "sha256:d57af09dd5bd51c89fb98145f2c03b0ae51eca5cc051ca41d76a2b5e048b67bd",
+>                 "sha256:eb2e542e470e522085dc52a73cb4efe556983351638ad3047c47f793b66ac8ed",
+>                 "sha256:047f5176ae95da2495e18bd0439246d574356c142942b3b2a8f06964d143f3a5",
+>                 "sha256:b29928d36c267fd080be28258e851109ab1bbf5dd833492a575ec9d1ef530808"
+60c58
+<             "LastTagTime": "2025-03-24T03:06:51.97722751Z"
+---
+>             "LastTagTime": "2025-03-24T03:07:55.101015345Z"
+64c62
+<             "digest": "sha256:c6a8a60a626ef6fd8acfd3908e2edadce0861db9c916f108f5aeb05f78a1c9e1",
+---
+>             "digest": "sha256:4fdaf30126c26e30ed46cfbc2432d1a7d8ba7305d5cd897a6ea68a995f63aae6",
+#+end_src

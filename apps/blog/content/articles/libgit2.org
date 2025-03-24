@@ -1,0 +1,40 @@
+#+title: libgit2
+#+categories: programming
+#+date: [2025-02-14 Fri]
+
+* About
+
+I'm having a little bit of fun with the libgit2sharp package and want to drive a
+running documentation of learnings.
+
+* APIs
+
+** Repository.Discover
+
+The ~Repository.Discover~ api supports ~.~ as an argument. It eventually calls
+libgit2's ~git_repository_discover~ api.
+
+If the API does not find a git directory, the returned value is ~null~:
+
+#+begin_src fsharp
+  open LibGit2Sharp
+
+  let dir : string = Repository.Discover("/Users/august.feng")
+
+  match dir with
+  | null -> eprintf $"whoops."
+  | s -> printfn $"{s}"
+#+end_src
+
+I've also learned of an elegant way to handle returned string values that are
+sometimes ~null~ to ~Option~:
+
+#+begin_src fsharp
+  open LibGit2Sharp
+
+  let dir : string = Repository.Discover("/Users/august.feng")
+
+  match dir |> Option.ofObj with
+  | Some s -> printfn $"{s}"
+  | None -> eprintf $"whoops."
+#+end_src
