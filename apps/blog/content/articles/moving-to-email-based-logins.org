@@ -1,0 +1,27 @@
+#+title: moving to email-based logins
+#+tags[]: security
+#+date: [2025-03-26 Wed]
+
+* About
+
+I've accidentally created a few online accounts with GitHub as the IdP and then
+later changed to email address.
+
+Since I'm trying to transition to email login only, I'm documenting here the
+experience I've had.
+
+* Vercel
+
+On Vercel, I initially created my account using GitHub as the IdP. This is (was)
+confirmed when I visit my account's
+https://github.com/settings/apps/authorizations and see it in the *Authorized
+GitHub Apps*.
+
+In Vercel's [[https://vercel.com/account/settings/authentication][authentication]] page, I also see the reciprocal connection towards
+GitHub.
+
+If I disconnect from Vercel side, I can reconnect seamlessly without any
+authentication.
+
+However, if I revoke the application's access from GitHub's side, then a
+disconnect/reconnect will retrigger an authorization/permission prompt.
