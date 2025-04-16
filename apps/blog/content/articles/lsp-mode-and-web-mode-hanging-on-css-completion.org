@@ -38,8 +38,22 @@ This is when I learned that the yasnippet system has hooks. If I remove the
 hook, then the UI no longer hangs:
 
 #+begin_src elisp
-  (make-local-variable 'yas-after-exit-snippet-hook)
   (set 'yas-after-exit-snippet-hook nil)
+#+end_src
+
+For what it's worth, the variable is added by the ~web-mode~ package:
+
+#+begin_src elisp
+  (add-hook 'yas-after-exit-snippet-hook
+            'web-mode-yasnippet-exit-hook
+            t t)
+#+end_src
+
+It's also buffer local, so I'll just use a ~.dir-locals.el~ file to override it
+per project:
+
+#+begin_src elisp
+  ((web-mode . ((yas-after-exit-snippet-hook . nil))))
 #+end_src
 
 A proper solution would be to investigate the ~textDocument/rangeFormatting~
