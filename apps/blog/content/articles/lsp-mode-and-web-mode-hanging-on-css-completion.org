@@ -1,0 +1,46 @@
+#+title: lsp-mode and web-mode hanging on css completion
+#+date: [2025-04-16 Wed]
+* About
+
+I'm using Spacemacs, and the Emacs UI hangs for a few seconds when I select a
+completion value while authoring css properties.
+
+* Studying the completion framework
+
+The completion framework provided by Spacemacs is I'm using is [[https://company-mode.github.io][company]] and the
+completion backend selected when I edit html is completion-capf which is bridge
+to the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Completion-in-Buffers.html#Completion-in-Buffers][native completion system in Emacs]].
+
+We can see which completion backend is being used by using the ~M-x:
+company-diag~ command.
+
+The ~company-dig~ command will even tell you the string prefix being used for
+completion.
+
+In my case, the ~completion-at-point-functions~ variable has
+~lsp-completion-at-point~ as the first value, so the buffer will use lsp in
+order to get completion values.
+
+* Back on the right track
+
+The list of completions pop up relatively quickly, so I'm assuming the problem
+can't be the lsp client/server.
+
+When the completion finally ends, I see this message:
+
+#+begin_text
+[yas] Error running #[128 \302\301\303\300""\207
+[(yas-after-exit-snippet-hook) run-hooks apply append] 6 (subr.elc . 20473)]:
+Timeout while waiting for response. Method: textDocument/rangeFormatting
+#+end_text
+
+This is when I learned that the yasnippet system has hooks. If I remove the
+hook, then the UI no longer hangs:
+
+#+begin_src elisp
+  (make-local-variable 'yas-after-exit-snippet-hook)
+  (set 'yas-after-exit-snippet-hook nil)
+#+end_src
+
+A proper solution would be to investigate the ~textDocument/rangeFormatting~
+call and see if that's what causing the hang, but I have things to do.
