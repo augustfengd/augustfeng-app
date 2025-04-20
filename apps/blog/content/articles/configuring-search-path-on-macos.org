@@ -1,0 +1,13 @@
+#+title: configuring search path on macos
+#+date: [2025-04-20 Sun]
+
+* About
+
+When we install MacTeX, ~/Library/TeX/texbin~ gets added to the *$PATH*
+environment variable.
+
+This configuration isn't found in the typical ~~/.profile~, ~~/.zprofile~
+~~/.zshrc~ or ~/etc/profile~.
+
+Instead, that path is found in a file in ~/etc/paths.d~. When I chatGPT, it says
+it's not part of any specs so it's a MacOS specific thing.
