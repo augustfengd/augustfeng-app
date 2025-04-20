@@ -1,3 +1,29 @@
+data "aws_ami" "al2023-arm64" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "architecture"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*"]
+  }
+}
+
+data "aws_ami" "al2023-ecs-arm64" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "architecture"
+    values = ["arm64"]
+  }
+  filter {
+    name   = "name"
+    values = ["al2023-ami-ecs-hvm-2023.*"]
+  }
+}
+
 resource "aws_eip" "simplelogin" {
   instance = aws_instance.simplelogin.id
   domain   = "vpc"
@@ -6,10 +32,10 @@ resource "aws_eip" "simplelogin" {
 resource "aws_instance" "simplelogin" {
   ami           = data.aws_ami.al2023-arm64.id
   instance_type = "t4g.small"
-  key_name      = aws_key_pair.augustfeng.key_name
+  key_name      = var.aws_key_pair_name
 
   vpc_security_group_ids = [aws_security_group.simplelogin.id]
-  subnet_id              = aws_subnet.compute-1a.id
+  subnet_id              = var.aws_subnet_ids.a
 
   root_block_device {
     encrypted   = true
@@ -27,7 +53,7 @@ resource "aws_instance" "simplelogin" {
 
 resource "aws_security_group" "simplelogin" {
   name   = "simplelogin"
-  vpc_id = aws_vpc.compute.id
+  vpc_id = var.aws_vpc_ids.compute
 }
 
 resource "aws_vpc_security_group_egress_rule" "simplelogin-all" {
