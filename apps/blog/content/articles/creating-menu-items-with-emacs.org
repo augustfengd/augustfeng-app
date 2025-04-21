@@ -1,0 +1,46 @@
+#+title: creating menu ietms with emacs
+#+date: [2025-04-21 Mon]
+
+* About
+
+We need three things in order to create a new menu on MacOS for emacs.
+
+* Keymap
+
+First we need to create a keymap. This is also used by modes to create
+keybindings.
+
+#+begin_src elisp
+  (defvar foobar (make-sparse-keymap "foobar"))
+#+end_src
+
+* define-key
+
+The ~define-key~ function is used to map keys to a function. For example, this
+following function will write "helloworld" on ~C-c z~:
+
+#+begin_src elisp
+  (define-key (current-global-map) (kbd "C-c z") (lambda () (interactive) (message "helloworld")))
+#+end_src
+
+It's also used to create menu items:
+
+#+begin_src elisp
+  (define-key foobar [helloworld]
+              '(menu-item "foobar" (lambda () (interactive) (message "helloworld"))))
+#+end_src
+
+To see this menu item, we need to attach it to the global menu bar:
+
+#+begin_src elisp
+  (define-key (current-global-map) [menu-bar helloworld]
+              (cons "helloworld" foobar))
+#+end_src
+
+As you may have observed, the ~define-key~ function is (quite) overloaded. In
+the first usage, we're using a vector as an argument for ~KEY~ and a command as
+an argument for ~DEF~.
+
+In the second usage, we're using a an [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Extended-Menu-Items.html][extended menu items]] definitions.
+
+In the third usage, we're using a cons as argument for ~DEF~.
