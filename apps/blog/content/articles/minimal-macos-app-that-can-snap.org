@@ -1,0 +1,100 @@
+#+title: minimal macos app that can snap
+#+date: [2025-04-20 Sun]
+* About
+
+This took me way too long to figure out.
+
+* Code
+
+#+begin_src objc
+  // main.m
+  #import <Cocoa/Cocoa.h>
+
+  @interface AppDelegate : NSObject <NSApplicationDelegate>
+  @property (strong, nonatomic) NSWindow *window;
+  @end
+
+  @implementation AppDelegate
+  - (void)applicationDidFinishLaunching:(NSNotification *)notification {
+    [self createMainMenu];
+    NSRect frame = NSMakeRect(0, 0, 400, 300);
+    NSUInteger style = NSWindowStyleMaskTitled | NSWindowStyleMaskResizable;
+    self.window = [[NSWindow alloc] initWithContentRect:frame
+                                              styleMask:style
+                                                backing:NSBackingStoreBuffered
+                                                  defer:NO];
+    [self.window setTitle:@"Foobar"];
+    [self.window center];
+
+    NSTextField *label = [[NSTextField alloc] init];
+    [label setStringValue:@"Hello, world!"];
+    [label setBezeled:NO];
+    [label setDrawsBackground:NO];
+    [label setEditable:NO];
+    [label setSelectable:NO];
+    [label setAlignment:NSTextAlignmentCenter];
+    [label setFont:[NSFont systemFontOfSize:24 weight:NSFontWeightMedium]];
+    [label setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+    [self.window.contentView addSubview:label];
+
+    [NSLayoutConstraint activateConstraints:@[
+                                              [label.centerXAnchor constraintEqualToAnchor:self.window.contentView.centerXAnchor],
+                                              [label.centerYAnchor constraintEqualToAnchor:self.window.contentView.centerYAnchor]
+                                              ]];
+
+
+    [self.window.contentView addSubview:label];
+    [self.window makeKeyAndOrderFront:nil];
+    [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
+  }
+
+  - (void)createMainMenu {
+    NSMenu *mainMenu = [[NSMenu alloc] init];
+
+    // Application menu
+    NSMenuItem *appMenuItem = [[NSMenuItem alloc] init];
+    [mainMenu addItem:appMenuItem];
+
+    NSMenu *appMenu = [[NSMenu alloc] init]; // XXX: initWithTitle doesn't set the
+                                             // title for this one for some
+                                             // reason.
+    [appMenuItem setSubmenu:appMenu];
+
+    NSMenuItem *quitItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
+                                                      action:@selector(terminate:)
+                                               keyEquivalent:@"q"];
+    [quitItem setTarget:NSApp];
+    [appMenu addItem:quitItem];
+
+    // Window menu
+    NSMenuItem *windowMenuItem = [[NSMenuItem alloc] init];
+    NSMenu *windowMenu = [[NSMenu alloc] initWithTitle:@"Window"];
+
+    [windowMenuItem setSubmenu:windowMenu];
+    [mainMenu addItem:windowMenuItem];
+    [NSApp setWindowsMenu:windowMenu];
+    [NSApp setMainMenu:mainMenu];
+  }
+
+  - (void)buttonClicked:(id)sender {
+    NSLog(@"Button was clicked!");
+  }
+  @end
+
+  int main(int argc, const char * argv[]) {
+    @autoreleasepool {
+      // XXX: some carbon api? cool.
+      ProcessSerialNumber psn = { 0, kCurrentProcess };
+      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+
+      NSApplication *app = [NSApplication sharedApplication];
+      AppDelegate *delegate = [[AppDelegate alloc] init];
+      [app setDelegate:delegate];
+      [app run];
+    }
+    return 0;
+  }
+#+end_src
+
+Compile this program with this command: ~clang -framework Cocoa -o main main.m~.
