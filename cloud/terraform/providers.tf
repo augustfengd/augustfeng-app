@@ -37,6 +37,11 @@ provider "aws" {
   region = "us-east-1" # yolo
 }
 
+provider "aws" {
+  alias = "ca-central-1"
+  region = "ca-central-1"
+}
+
 provider "google" {
   project = "augustfengd"
 }
