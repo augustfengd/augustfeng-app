@@ -1,3 +1,6 @@
+variable "cloudflare_zone_id" {
+  type = string
+}
 variable "aws_key_pair_name" {
   type = string
 }

@@ -1,6 +1,7 @@
 module "socks" {
-  source            = "./socks"
-  aws_key_pair_name = aws_key_pair.augustfeng-ca-central-1.key_name
+  source             = "./socks"
+  cloudflare_zone_id = var.cloudflare_zone_ids.augustfeng-app
+  aws_key_pair_name  = aws_key_pair.augustfeng-ca-central-1.key_name
   aws_vpc_ids = {
     compute = aws_vpc.compute-ca-central-1.id
   }
