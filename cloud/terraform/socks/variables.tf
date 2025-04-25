@@ -12,9 +12,6 @@ variable "aws_subnet_ids" {
   type = object({
     a = string
     b = string
-    c = string
     d = string
-    e = string
-    f = string
   })
 }
