@@ -1,6 +1,6 @@
 module "socks" {
   source            = "./socks"
-  aws_key_pair_name = aws_key_pair.augustfeng.key_name
+  aws_key_pair_name = aws_key_pair.augustfeng-ca-central-1.key_name
   aws_vpc_ids = {
     compute = aws_vpc.compute-ca-central-1.id
   }
@@ -12,6 +12,12 @@ module "socks" {
   providers = {
     aws = aws.ca-central-1
   }
+}
+
+resource "aws_key_pair" "augustfeng-ca-central-1" {
+  provider   = aws.ca-central-1
+  key_name   = "augustfeng"
+  public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIO8uyj9CjbNOSW/fkR2sAcif52NwDv/2Cu9BTRVHO0bO augustfeng"
 }
 
 resource "aws_vpc" "compute-ca-central-1" {
