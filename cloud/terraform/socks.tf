@@ -15,6 +15,7 @@ module "socks" {
 }
 
 resource "aws_vpc" "compute-ca-central-1" {
+  provider             = aws.ca-central-1
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
@@ -24,29 +25,34 @@ resource "aws_vpc" "compute-ca-central-1" {
 }
 
 resource "aws_subnet" "compute-ca-central-1a" {
+  provider          = aws.ca-central-1
   vpc_id            = aws_vpc.compute-ca-central-1.id
   availability_zone = "ca-central-1a"
   cidr_block        = cidrsubnet(aws_vpc.compute-ca-central-1.cidr_block, 4, 0)
 }
 
 resource "aws_subnet" "compute-ca-central-1b" {
+  provider          = aws.ca-central-1
   vpc_id            = aws_vpc.compute-ca-central-1.id
   availability_zone = "ca-central-1b"
   cidr_block        = cidrsubnet(aws_vpc.compute-ca-central-1.cidr_block, 4, 1)
 }
 
 resource "aws_subnet" "compute-ca-central-1d" {
+  provider          = aws.ca-central-1
   vpc_id            = aws_vpc.compute-ca-central-1.id
   availability_zone = "ca-central-1d"
   cidr_block        = cidrsubnet(aws_vpc.compute-ca-central-1.cidr_block, 4, 2)
 }
 
 resource "aws_internet_gateway" "compute-ca-central-1" {
-  vpc_id = aws_vpc.compute-ca-central-1.id
+  provider = aws.ca-central-1
+  vpc_id   = aws_vpc.compute-ca-central-1.id
 }
 
 resource "aws_route_table" "compute-ca-central-1" {
-  vpc_id = aws_vpc.compute-ca-central-1.id
+  provider = aws.ca-central-1
+  vpc_id   = aws_vpc.compute-ca-central-1.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.compute-ca-central-1.id
@@ -54,16 +60,19 @@ resource "aws_route_table" "compute-ca-central-1" {
 }
 
 resource "aws_route_table_association" "compute-ca-central-1a" {
+  provider       = aws.ca-central-1
   subnet_id      = aws_subnet.compute-ca-central-1a.id
   route_table_id = aws_route_table.compute-ca-central-1.id
 }
 
 resource "aws_route_table_association" "compute-ca-central-1b" {
+  provider       = aws.ca-central-1
   subnet_id      = aws_subnet.compute-ca-central-1b.id
   route_table_id = aws_route_table.compute-ca-central-1.id
 }
 
 resource "aws_route_table_association" "compute-ca-central-1d" {
+  provider       = aws.ca-central-1
   subnet_id      = aws_subnet.compute-ca-central-1d.id
   route_table_id = aws_route_table.compute-ca-central-1.id
 }
