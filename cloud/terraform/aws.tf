@@ -135,6 +135,31 @@ resource "aws_s3_bucket" "augustfeng" {
   bucket = "augustfeng"
 }
 
+resource "aws_s3_bucket_public_access_block" "augustfeng" {
+  bucket = aws_s3_bucket.augustfeng.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+data "aws_iam_policy_document" "augustfeng" {
+  statement {
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions   = ["s3:GetObject"]
+    resources = [format("%s/public/*", aws_s3_bucket.augustfeng.arn)]
+  }
+}
+
+resource "aws_s3_bucket_policy" "augustfeng" {
+  bucket = aws_s3_bucket.augustfeng.id
+  policy = data.aws_iam_policy_document.augustfeng.json
+}
+
 resource "aws_s3_bucket" "augustfeng-app" {
   bucket = "augustfeng-app"
 }
@@ -156,7 +181,6 @@ data "aws_iam_policy_document" "augustfeng-app" {
     }
   }
 }
-
 
 resource "aws_s3_bucket_policy" "augustfeng-app" {
   bucket = aws_s3_bucket.augustfeng-app.id
