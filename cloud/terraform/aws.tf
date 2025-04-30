@@ -156,8 +156,9 @@ data "aws_iam_policy_document" "augustfeng" {
 }
 
 resource "aws_s3_bucket_policy" "augustfeng" {
-  bucket = aws_s3_bucket.augustfeng.id
-  policy = data.aws_iam_policy_document.augustfeng.json
+  bucket     = aws_s3_bucket.augustfeng.id
+  policy     = data.aws_iam_policy_document.augustfeng.json
+  depends_on = [aws_s3_bucket_public_access_block.augustfeng]
 }
 
 resource "aws_s3_bucket" "augustfeng-app" {
