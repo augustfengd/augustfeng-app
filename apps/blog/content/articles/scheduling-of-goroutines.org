@@ -1,0 +1,90 @@
+#+title: scheduling of goroutines
+
+* About
+
+I was debugging some program and was curious about a race condition. The program
+has a buffered channel of size *N*, and a goroutine is sending *N+1* messages.
+
+If I read a message in the main thread, why is the length of the buffer still
+*N*?
+
+#+begin_src go
+  package main
+
+  import "fmt"
+
+  func main() {
+  	ch := make(chan int, 1)
+  	go func() {
+  		ch <- 0
+  		ch <- 0
+  	}()
+
+  	<-ch
+
+  	n := len(ch)
+  	fmt.Println(n)
+  }
+#+end_src
+
+* Experiment
+
+A search on the internet hinted at the non-deterministic behavior of scheduling
+goroutines.
+
+In order to confirm the non-deterministic behavior, I ran 1 million go routines
+and printed the results.
+
+#+begin_src go
+  package main
+
+  import (
+  	"fmt"
+  	"os"
+  	"sync"
+  	"text/tabwriter"
+  )
+
+  func run(update chan int, wg *sync.WaitGroup) {
+  	ch := make(chan int, 1)
+  	go func() {
+  		ch <- 0
+  		ch <- 0
+  	}()
+  	<-ch
+  	update <- len(ch)
+  	wg.Done()
+  }
+
+  func main() {
+  	var wg sync.WaitGroup
+  	update := make(chan int)
+  	result := make(map[int]int)
+  	w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+
+  	go func() {
+  		for {
+  			v := <-update
+  			result[v] = result[v] + 1
+  		}
+  	}()
+
+  	for range 1_000_000 {
+  		wg.Add(1)
+  		go run(update, &wg)
+  	}
+
+  	wg.Wait()
+  	fmt.Fprintf(w, "0\t1\n")
+  	fmt.Fprintf(w, "%d\t%d\n", result[0], result[1])
+  	w.Flush()
+  }
+#+end_src
+
+In the 1 million experiments that ran, only 12 executions resulted in a buffer
+of length *N-1* while the rest had lengths of *N*:
+
+#+begin_src
+0  1
+12 999988
+#+end_src
