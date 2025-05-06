@@ -1,0 +1,101 @@
+#+title: naive bursty rate limiters in go
+
+* About
+
+I've read a few articles that describe a simple implementation of a bursty rate
+limiter.
+
+#+begin_src go
+  package main
+
+  import (
+  	"fmt"
+  	"time"
+  )
+
+  const (
+  	limitPerSecond = 3
+  )
+
+  func hit(guard chan time.Time) {
+  	<-guard
+  	now := time.Now().Format(time.StampMicro)
+  	fmt.Println(now)
+  }
+
+  func main() {
+  	ticker := time.NewTicker(time.Second / time.Duration(limitPerSecond))
+  	guard := make(chan time.Time, limitPerSecond)
+
+  	go func() {
+  		for {
+  			t := <-ticker.C
+  			guard <- t
+  		}
+  	}()
+
+  	for {
+  		hit(guard)
+  	}
+  }
+#+end_src
+
+Although we set a limit of three, it *can* burst to up to six per second.
+
+* Explanation
+
+When the channel is full, its length is three and the goroutine is held at the
+~guard <- t~ line.
+
+This means that as the channel will be back back to full, giving an effective
+buffered burst capacity of of four.
+
+Additionally, the ticker's channel is overdue so ~t := <- ticker.C~ is
+immediately unblocked on the next iteration, giving an effective buffered burst
+capacity of five.
+
+Above all this, we must also account for the refill rate, which gives an
+additional burst capacity of three within a second.
+
+All this said, we will experience an initial burst capacity of 8 even though our
+naive rate limiter is set to 3.
+
+* Experiment
+
+We can confirm the description above by adding a bit of sleep so that the buffer
+capacity fills up.
+
+#+begin_src go
+  func main () {
+  	// ...
+  	time.Sleep(3 * time.Second)
+
+  	for {
+  		hit(guard)
+  	}
+  }
+#+end_src
+
+#+begin_src text
+  --- initial buffer capacity (transient)
+  May  6 23:58:21.920075
+  May  6 23:58:21.920364
+  May  6 23:58:21.920367
+  May  6 23:58:21.920368
+  May  6 23:58:21.920369
+  --- continuous refill within the first second (transient)
+  May  6 23:58:22.253359
+  May  6 23:58:22.585897
+  May  6 23:58:22.920059
+  --- continuous refill (steady state)
+  May  6 23:58:23.252562
+  May  6 23:58:23.586682
+  May  6 23:58:23.920012
+  May  6 23:58:24.252565
+  May  6 23:58:24.586673
+  May  6 23:58:24.919287
+  May  6 23:58:25.253333
+  May  6 23:58:25.586672
+  May  6 23:58:25.919988
+  May  6 23:58:26.252630
+#+end_src
