@@ -99,3 +99,57 @@ capacity fills up.
   May  6 23:58:25.919988
   May  6 23:58:26.252630
 #+end_src
+
+* A better solution
+
+The ~golang.org/x/time/rate~ package implements a token bucket that can deploy
+the burst limiter we intended.
+
+#+begin_src go
+  package main
+
+  import (
+  	"context"
+  	"fmt"
+  	"golang.org/x/time/rate"
+  	"time"
+  )
+
+  const (
+  	r = rate.Limit(10)
+  	b = 3
+  )
+
+  func hit() {
+  	now := time.Now().Format(time.StampMicro)
+  	fmt.Println(now)
+  }
+
+  func main() {
+  	ctx := context.Background()
+  	limiter := rate.NewLimiter(r, b)
+
+  	time.Sleep(5 * time.Second)
+  	for {
+  		if err := limiter.Wait(ctx); err != nil {
+  			continue
+  		}
+  		hit()
+  	}
+  }
+#+end_src
+
+#+begin_src text
+May  7 22:17:33.161845
+May  7 22:17:33.162648
+May  7 22:17:33.162662
+May  7 22:17:33.262158
+May  7 22:17:33.362813
+May  7 22:17:33.462167
+May  7 22:17:33.562831
+May  7 22:17:33.662231
+May  7 22:17:33.762879
+May  7 22:17:33.862244
+May  7 22:17:33.962163
+May  7 22:17:34.062833
+#+end_src
