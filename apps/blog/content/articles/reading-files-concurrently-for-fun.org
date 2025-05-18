@@ -1,5 +1,6 @@
 #+title: reading files concurrently for fun
 #+categories: programming
+#+date: [2025-05-17 Sat]
 
 * About
 
