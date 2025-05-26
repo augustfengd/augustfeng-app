@@ -1,0 +1,58 @@
+#+title: function having methods
+#+date: [2025-05-26 Mon]
+
+* About
+
+While going through the /Learning Go - An Idiomatic Approach to Real-World Go
+Programming/ book by *Jon Bodner*, I learned that functions can have methods.
+
+#+begin_src go
+  package main
+
+  import "fmt"
+
+  type Foobar func()
+
+  func (foobar Foobar) Run() {
+  	foobar()
+  }
+
+  func main() {
+  	helloworld := func() {
+  		fmt.Println("helloworld")
+  	}
+  	foobar := Foobar(helloworld)
+  	foobar.Run()
+  }
+#+end_src
+
+This adds to the "first-class functions" principle that Go adheres to.
+
+* Rust does it too?!
+
+Not too long after, I was also surprised to discover a similar pattern in a Rust
+library:
+
+#+begin_src go
+  trait Foobar {
+  	fn run(&self);
+  }
+
+  impl<F> Foobar for F
+  where
+  F: Fn(),
+  	{
+  	fn run(&self) {
+  		self()
+  	}
+  }
+
+  fn main() {
+  	let it = || println!("Hello, world!");
+  	it.run();
+  }
+
+#+end_src
+
+It's only a little bit different as we don't need a type conversion; we can
+invoke the run method differently on the closure!
