@@ -33,25 +33,24 @@ This adds to the "first-class functions" principle that Go adheres to.
 Not too long after, I was also surprised to discover a similar pattern in a Rust
 library:
 
-#+begin_src go
+#+begin_src rust
   trait Foobar {
-  	fn run(&self);
+  	  fn run(&self);
   }
 
   impl<F> Foobar for F
   where
-  F: Fn(),
-  	{
-  	fn run(&self) {
-  		self()
-  	}
+      F: Fn(),
+  {
+  	  fn run(&self) {
+  		    self()
+  	  }
   }
 
   fn main() {
-  	let it = || println!("Hello, world!");
-  	it.run();
+  	  let it = || println!("Hello, world!");
+  	  it.run();
   }
-
 #+end_src
 
 It's only a little bit different as we don't need a type conversion; we can
