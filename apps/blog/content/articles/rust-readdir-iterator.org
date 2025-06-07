@@ -1,0 +1,59 @@
+#+title: Rust ReadDir Iterator
+#+categories: programming
+#+date: [2025-06-07 Sat]
+
+* About
+
+The ~std::fs::read_dir~ returns an Iterator that's wrapped in a Result. The
+Result value resolves to an error in the following conditions:
+
+- The process doesn't have permission to read the directory.
+- The directory doesn't exist.
+- The path is not a directory.
+
+This is understandable. What's annoying is that each value returned by the
+iterator is also a Result value.
+
+Consequently, I investigated the ~std::fs::read_dir~ implementation to see when
+would an *Err* occur.
+
+* Learning
+
+The ~std::fs::read_dir~ function eventually invokes a system call: ~readdir_r~.
+
+The ~readdir_r~ function accepts a pointer to a struct to a ~dirent~ and will
+mutate it. It also returns an error on error.
+
+When I investigated the potential errors, I understood that it's not a
+deterministic set. In fact, any error from ~sys/errno.h~ may be returned so it's
+implementation dependant.
+
+The manual pages from bsd are a little bit friendlier and hint that it may
+return any error that ~getdents~ returns:
+
+#+begin_src
+ERRORS
+       The getdirentries() system call will fail if:
+
+       [EBADF]		  The  fd argument is not a valid file descriptor open
+			  for reading.
+
+       [EFAULT]		  Either buf or	non-NULL basep point outside the allo-
+			  cated	address	space.
+
+       [EINVAL]		  The file referenced by fd is	not  a	directory,  or
+			  nbytes  is too small for returning a directory entry
+			  or block of entries, or the current position pointer
+			  is invalid.
+
+       [EIO]		  An I/O error occurred	while reading from or  writing
+			  to the file system.
+
+       [EINTEGRITY]	  Corrupted  data  was detected	while reading from the
+			  file system.
+
+       [ENOENT]		  Directory unlinked but still open.
+#+end_src
+
+These errors seem very edge casey. I think I'll just handle the errors with a
+log and skip for my code.
