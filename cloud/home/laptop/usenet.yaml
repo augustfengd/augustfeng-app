@@ -1,0 +1,201 @@
+---
+- name: arr
+  hosts: all
+  become: true
+  tasks:
+    - name: Create user 'media'
+      ansible.builtin.group:
+        name: media
+        system: yes
+    - name: install
+      ansible.builtin.apt:
+        name: sqlite3
+        state: present
+- name: sonarr
+  hosts: all
+  become: true
+  tasks:
+    - name: update
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Create user 'sonarr'
+      ansible.builtin.user:
+        name: sonarr
+        system: yes
+        append: yes
+        groups:
+          - media
+    - name: jellyfin
+      ansible.builtin.user:
+        name: jellyfin
+        append: yes
+        groups:
+          - sonarr
+    - name: augustfeng
+      ansible.builtin.user:
+        name: augustfeng
+        append: yes
+        groups:
+          - sonarr
+    - name: Create datadir
+      ansible.builtin.file:
+        path: /var/lib/sonarr
+        state: directory
+        owner: sonarr
+        group: media
+        mode: '0755'
+    - name: Download
+      get_url:
+        url: "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64"
+        dest: /tmp/sonarr.tar.gz
+        mode: '0644'
+    - name: Extract Sonarr to /opt/Sonarr
+      unarchive:
+        src: /tmp/sonarr.tar.gz
+        dest: /opt
+        remote_src: yes
+    - name: sonarr.service
+      ansible.builtin.copy:
+        src: usenet/sonarr.service
+        dest: /etc/systemd/system/sonarr.service
+    - name: sonarr
+      ansible.builtin.systemd_service:
+        name: sonarr
+        state: started
+        enabled: true
+- name: radarr
+  hosts: all
+  become: true
+  tasks:
+    - name: update
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Create user 'radarr'
+      ansible.builtin.user:
+        name: radarr
+        system: yes
+        groups:
+          - media
+        append: yes
+    - name: jellyfin
+      ansible.builtin.user:
+        name: jellyfin
+        append: yes
+        groups:
+          - radarr
+    - name: augustfeng
+      ansible.builtin.user:
+        name: augustfeng
+        append: yes
+        groups:
+          - radarr
+    - name: Create datadir
+      ansible.builtin.file:
+        path: /var/lib/radarr
+        state: directory
+        owner: radarr
+        group: media
+        mode: '0755'
+    - name: Download
+      get_url:
+        url: 'http://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64'
+        dest: /tmp/radarr.tar.gz
+        mode: '0644'
+    - name: Extract Radarr to /opt/Radarr
+      unarchive:
+        src: /tmp/radarr.tar.gz
+        dest: /opt
+        remote_src: yes
+    - name: radarr.service
+      ansible.builtin.copy:
+        src: usenet/radarr.service
+        dest: /etc/systemd/system/radarr.service
+    - name: radarr
+      ansible.builtin.systemd_service:
+        name: radarr
+        state: started
+        enabled: true
+- name: transmission
+  hosts: all
+  become: true
+  tasks:
+    - name: install
+      ansible.builtin.apt:
+        name: transmission-daemon
+        state: present
+    - name: /etc/systemd/system/transmission-daemon.service.d
+      ansible.builtin.file:
+        path: /etc/systemd/system/transmission-daemon.service.d
+        state: directory
+        owner: root
+        group: root
+    # hack: https://askubuntu.com/a/1528158
+    - name: transmission-daemon
+      ansible.builtin.copy:
+        src: usenet/transmission.conf
+        dest: /etc/systemd/system/transmission-daemon.service.d/transmission.conf
+      notify: systemd
+    - name: sonarr
+      ansible.builtin.user:
+        name: sonarr
+        append: yes
+        groups:
+          - debian-transmission
+    - name: radarr
+      ansible.builtin.user:
+        name: radarr
+        append: yes
+        groups:
+          - debian-transmission
+  handlers:
+    - name: systemd
+      ansible.builtin.systemd_service:
+        state: restarted
+        name: transmission-daemon
+- name: SABnzbd
+  hosts: all
+  become: true
+  tasks:
+    - name: Add jcfp/nobetas PPA
+      ansible.builtin.apt_repository:
+        repo: ppa:jcfp/nobetas
+        state: present
+    - name: Update APT cache and upgrade packages
+      ansible.builtin.apt:
+        update_cache: yes
+        upgrade: dist
+    - name: Install sabnzbdplus
+      ansible.builtin.apt:
+        name: sabnzbdplus
+        state: present
+    - name: Create user 'sabnzbdplus'
+      ansible.builtin.user:
+        name: sabnzbdplus
+        system: yes
+    - name: sonarr
+      ansible.builtin.user:
+        name: sonarr
+        append: yes
+        groups:
+          - sabnzbdplus
+    - name: radarr
+      ansible.builtin.user:
+        name: radarr
+        append: yes
+        groups:
+          - sabnzbdplus
+    - name: augustfeng
+      ansible.builtin.user:
+        name: augustfeng
+        append: yes
+        groups:
+          - sabnzbdplus
+    - name: sabnzbdplus
+      ansible.builtin.copy:
+        src: usenet/sabnzbdplus.conf
+        dest: /etc/default/sabnzbdplus
+    - name: Reload systemd and restart sabnzbdplus service
+      ansible.builtin.systemd:
+        name: sabnzbdplus
+        state: restarted
+        daemon_reload: yes

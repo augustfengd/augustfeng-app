@@ -1,0 +1,20 @@
+- name: nginx
+  hosts: all
+  become: true
+  tasks:
+    - name: logind.conf.d
+      ansible.builtin.file:
+        path: /etc/systemd/logind.conf.d
+        state: directory
+        owner: root
+        group: root
+    - name: logind.conf
+      ansible.builtin.copy:
+        src: system/laptop2022.conf
+        dest: /etc/systemd/logind.conf.d/laptop2022.conf
+      notify: systemd
+  handlers:
+    - name: systemd
+      ansible.builtin.systemd_service:
+        state: restarted
+        name: systemd-logind
