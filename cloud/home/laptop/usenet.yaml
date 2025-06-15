@@ -3,14 +3,57 @@
   hosts: all
   become: true
   tasks:
-    - name: Create user 'media'
+    - name: Create group 'media'
       ansible.builtin.group:
         name: media
         system: yes
+    - name: augustfeng
+      ansible.builtin.user:
+        name: augustfeng
+        append: yes
+        groups:
+          - media
+- name: jellyfin - gpg
+  hosts: all
+  become: true
+  tasks:
+    - name: asc
+      ansible.builtin.get_url:
+        url: https://repo.jellyfin.org/ubuntu/jellyfin_team.gpg.key
+        dest: /etc/apt/trusted.gpg.d/jellyfin.asc
+        mode: '0644'
+      notify: dearmor
+  handlers:
+    - name: dearmor
+      ansible.builtin.command:
+        cmd: gpg --dearmor --output /etc/apt/trusted.gpg.d/jellyfin.gpg /etc/apt/trusted.gpg.d/jellyfin.asc
+- name: jellyfin
+  hosts: all
+  become: true
+  tasks:
+    - name: Add Jellyfin deb822 repository
+      ansible.builtin.deb822_repository:
+        name: jellyfin
+        types: [deb]
+        uris: https://repo.jellyfin.org/ubuntu
+        suites: [noble]
+        components: [main]
+        architectures: [amd64]
+        signed_by: /etc/apt/trusted.gpg.d/jellyfin.gpg
+        state: present
+    - name: update
+      ansible.builtin.apt:
+        update_cache: yes
     - name: install
       ansible.builtin.apt:
-        name: sqlite3
+        name: jellyfin
         state: present
+    - name: media
+      ansible.builtin.user:
+        name: jellyfin
+        append: yes
+        groups:
+          - media
 - name: sonarr
   hosts: all
   become: true
@@ -18,25 +61,17 @@
     - name: update
       ansible.builtin.apt:
         update_cache: yes
+    - name: Create 'sonarr' home
+      ansible.builtin.file:
+        path: /home/sonarr
+        state: directory
+        owner: sonarr
+        group: media
     - name: Create user 'sonarr'
       ansible.builtin.user:
         name: sonarr
+        group: media
         system: yes
-        append: yes
-        groups:
-          - media
-    - name: jellyfin
-      ansible.builtin.user:
-        name: jellyfin
-        append: yes
-        groups:
-          - sonarr
-    - name: augustfeng
-      ansible.builtin.user:
-        name: augustfeng
-        append: yes
-        groups:
-          - sonarr
     - name: Create datadir
       ansible.builtin.file:
         path: /var/lib/sonarr
@@ -70,25 +105,17 @@
     - name: update
       ansible.builtin.apt:
         update_cache: yes
+    - name: Create 'radarr' home
+      ansible.builtin.file:
+        path: /home/radarr
+        state: directory
+        owner: sonarr
+        group: media
     - name: Create user 'radarr'
       ansible.builtin.user:
         name: radarr
+        group: media
         system: yes
-        groups:
-          - media
-        append: yes
-    - name: jellyfin
-      ansible.builtin.user:
-        name: jellyfin
-        append: yes
-        groups:
-          - radarr
-    - name: augustfeng
-      ansible.builtin.user:
-        name: augustfeng
-        append: yes
-        groups:
-          - radarr
     - name: Create datadir
       ansible.builtin.file:
         path: /var/lib/radarr
@@ -119,10 +146,31 @@
   hosts: all
   become: true
   tasks:
+    # XXX: create debian-transmission and bypass the check guard in the transmission-daemon's postint
+    - name: user
+      ansible.builtin.user:
+        name: debian-transmission
+        home: /var/lib/transmission-daemon
+        system: yes
+    # XXX: the postint expects this group even if we're not going to use it.
+    - name: Create group 'debian-transmission'
+      ansible.builtin.group:
+        name: debian-transmission
+        system: yes
     - name: install
       ansible.builtin.apt:
         name: transmission-daemon
         state: present
+    # XXX: rewrite the permissions configured by postint
+    - name: permissions
+      ansible.builtin.file:
+        path: "{{ item }}"
+        group: media
+      loop:
+        - /var/lib/transmission-daemon/.config/transmission-daemon
+        - /var/lib/transmission-daemon/downloads
+        - /etc/transmission-daemon/settings.json
+        - /etc/transmission-daemon
     - name: /etc/systemd/system/transmission-daemon.service.d
       ansible.builtin.file:
         path: /etc/systemd/system/transmission-daemon.service.d
@@ -133,20 +181,9 @@
     - name: transmission-daemon
       ansible.builtin.copy:
         src: usenet/transmission.conf
-        dest: /etc/systemd/system/transmission-daemon.service.d/transmission.conf
+        dest: /etc/systemd/system/transmission-daemon.service.d/override.conf
       notify: systemd
-    - name: sonarr
-      ansible.builtin.user:
-        name: sonarr
-        append: yes
-        groups:
-          - debian-transmission
-    - name: radarr
-      ansible.builtin.user:
-        name: radarr
-        append: yes
-        groups:
-          - debian-transmission
+    # TODO: update the umask in /etc/transmission-daemon/settings.json to 002.
   handlers:
     - name: systemd
       ansible.builtin.systemd_service:
@@ -171,29 +208,18 @@
     - name: Create user 'sabnzbdplus'
       ansible.builtin.user:
         name: sabnzbdplus
+        group: media
         system: yes
-    - name: sonarr
-      ansible.builtin.user:
-        name: sonarr
-        append: yes
-        groups:
-          - sabnzbdplus
-    - name: radarr
-      ansible.builtin.user:
-        name: radarr
-        append: yes
-        groups:
-          - sabnzbdplus
-    - name: augustfeng
-      ansible.builtin.user:
-        name: augustfeng
-        append: yes
-        groups:
-          - sabnzbdplus
     - name: sabnzbdplus
       ansible.builtin.copy:
         src: usenet/sabnzbdplus.conf
         dest: /etc/default/sabnzbdplus
+    - name: umask
+      community.general.ini_file:
+        path: /home/sabnzbdplus/.sabnzbd/sabnzbd.ini
+        section: misc
+        option: permissions
+        value: 775
     - name: Reload systemd and restart sabnzbdplus service
       ansible.builtin.systemd:
         name: sabnzbdplus

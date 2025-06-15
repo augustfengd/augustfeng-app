@@ -1,0 +1,14 @@
+- name: user
+  hosts: all
+  become: true
+  tasks:
+    - name: install
+      ansible.builtin.apt:
+        pkg:
+          - sway
+          - swayidle
+        state: present
+    - name: laptop2022.conf
+      ansible.builtin.copy:
+        src: user/sway.conf
+        dest: /etc/sway/config.d/augustfeng.conf
