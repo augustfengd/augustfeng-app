@@ -1,4 +1,4 @@
-- name: user
+- name: gui
   hosts: all
   become: true
   tasks:
@@ -7,8 +7,18 @@
         pkg:
           - sway
           - swayidle
+          - suckless-tools
         state: present
     - name: laptop2022.conf
       ansible.builtin.copy:
         src: user/sway.conf
         dest: /etc/sway/config.d/augustfeng.conf
+- name: emacs
+  hosts: all
+  become: true
+  tasks:
+    - name: install
+      ansible.builtin.apt:
+        pkg:
+          - emacs-pgtk
+        state: present

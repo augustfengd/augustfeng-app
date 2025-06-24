@@ -1,0 +1,39 @@
+- name: syncthing - gpg
+  hosts: all
+  become: true
+  tasks:
+    - name: asc
+      ansible.builtin.get_url:
+        url: https://syncthing.net/release-key.gpg
+        dest: /etc/apt/trusted.gpg.d/syncthing.gpg
+        mode: '0644'
+- name: syncthing
+  hosts: all
+  become: true
+  tasks:
+    - name: Add Syncthing repository
+      ansible.builtin.deb822_repository:
+        name: syncthing
+        types: [deb]
+        uris: https://apt.syncthing.net
+        suites: [syncthing]
+        components: [stable]
+        architectures: [amd64]
+        signed_by: /etc/apt/trusted.gpg.d/syncthing.gpg
+        state: present
+    - name: update
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: install
+      ansible.builtin.apt:
+        name: syncthing
+        state: present
+    - name: Enable syncthing@myuser service
+      ansible.builtin.systemd:
+        name: "syncthing@augustfeng.service"
+        enabled: true
+    - name: Start syncthing@myuser service
+      ansible.builtin.systemd:
+        name: "syncthing@augustfeng.service"
+        state: started
+
