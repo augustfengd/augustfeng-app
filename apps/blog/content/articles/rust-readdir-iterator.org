@@ -4,25 +4,32 @@
 
 * About
 
-The ~std::fs::read_dir~ returns an Iterator that's wrapped in a Result. The
-Result value resolves to an error in the following conditions:
+The ~std::fs::read_dir~ returns a ~ReadDir~ struct, which is an *Iterator*,
+wrapped in a *Result*. The *Result* value resolves to an error in the following
+conditions:
 
 - The process doesn't have permission to read the directory.
 - The directory doesn't exist.
 - The path is not a directory.
 
-This is understandable. What's annoying is that each value returned by the
-iterator is also a Result value.
+This is understandable. What's annoying is that each item returned by the
+iterator is of also *Result* type.
 
-Consequently, I investigated the ~std::fs::read_dir~ implementation to see when
+Consequently, I investigated the *Iterator* implementation ~ReadDir~ to see when
 would an *Err* occur.
 
 * Learning
 
-The ~std::fs::read_dir~ function eventually invokes a system call: ~readdir_r~.
+** Rust
 
-The ~readdir_r~ function accepts a pointer to a struct to a ~dirent~ and will
-mutate it. It also returns an error on error.
+The *Iterator* implementation of ~ReadDir~ eventually invokes a system call:
+~readdir_r~.
+
+** C
+
+(In C land) The ~readdir_r~ system call accepts a pointer to a ~dirent~ struct
+and will mutate it. It's return type is int, which communicats a potential
+error.
 
 When I investigated the potential errors, I understood that it's not a
 deterministic set. In fact, any error from ~sys/errno.h~ may be returned so it's
