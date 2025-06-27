@@ -1,0 +1,80 @@
+#+title: Rust existential types are opaque
+#+categories: programming
+#+date: [2025-06-27 Fri]
+
+* About
+
+I ran into a lifetime issue that I *could* not understand (at the time). After a
+day of rest and another visit to the code, I had enough energy to clarify the
+code and ask ChatGPT for some help again.
+
+This time, I had gotten an explanation that made sense and a solution that
+worked!
+
+* Problem sample
+
+Now that I understood the concepts, I simplified the code even more for
+demonstration purposes.
+
+#+begin_src rust
+  trait Baz {
+      fn helloworld(&self) -> String;
+  }
+
+  trait Foo {
+      fn bar(&self) -> impl Baz;
+  }
+
+  trait Generate {
+      fn fooers(&self) -> impl Iterator<Item = impl Foo>;
+  }
+  struct Node<T: Baz> {
+      path: T,
+  }
+
+  fn build(generate: &impl Generate) -> Result<Vec<Node<impl Baz>>, String> {
+      let mut nodes = vec![];
+      for fooer in generate.fooers() {
+          let path = fooer.bar(); // XXX: `fooer` does not live long enough
+          let node = Node { path };
+          nodes.push(node);
+      }
+      Ok(nodes)
+  }
+#+end_src
+
+In the code above, the ~fooer~ value is of type ~impl Foo~. So how can an
+implementation not live long enough?
+
+* Explanation
+
+If we break it down, /something/ must be implementing ~Foo~. So it must be this
+/something/ that is not living long enough.
+
+Hint: Rust names these /something/ as *opaque types*; they are concrete, but
+hidden from the caller.
+
+The trait definition of Foo is:
+
+#+begin_src rust
+  trait Foo {
+      fn bar(&self) -> impl Baz;
+  }
+#+end_src
+
+This doesn't describe whether the ~bar~ method will return an borrowed or owned
+value; it can be either.
+
+If the value returned by ~bar()~ is borrowed from fooer, then the ~path~ value
+will be invalid once ~fooer~ goes out of scope and is dropped.
+
+We can fix this by having the ~bar()~ method to return only owned values.
+
+The trait definition below does exactly that:
+
+#+begin_src rust
+  trait Foo {
+      type Owned: Baz + Sized;
+      fn bar(&self) -> Self::Owned;
+  }
+#+end_src
