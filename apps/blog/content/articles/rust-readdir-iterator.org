@@ -25,18 +25,31 @@ would an *Err* occur.
 The *Iterator* implementation of ~ReadDir~ eventually invokes a system call:
 ~readdir_r~.
 
-** C
+** System call
 
-(In C land) The ~readdir_r~ system call accepts a pointer to a ~dirent~ struct
-and will mutate it. It's return type is int, which communicats a potential
-error.
+The ~readdir_r~ system call accepts a pointer to a ~dirent~ struct and will
+mutate it. It's return type is int, which communicats a potential error.
 
 When I investigated the potential errors, I understood that it's not a
 deterministic set. In fact, any error from ~sys/errno.h~ may be returned so it's
 implementation dependant.
 
-The manual pages from bsd are a little bit friendlier and hint that it may
-return any error that ~getdents~ returns:
+Luckily man pages (~man 3 readdir_r~) hint that the returned value may be any
+values documented for the ~getdirentries(2)~ system call.
+
+#+begin_src
+ERRORS
+     getdirentries() will fail if:
+
+     [EBADF]            fd is not a valid file descriptor open for reading.
+
+     [EFAULT]           Either buf or basep point outside the allocated address space.
+
+     [EIO]              An I/O error occurred while reading from or writing to the file system.
+#+end_src
+
+The manual pages from BSD are also friendly and hint that it may return any
+error that ~getdents~ returns:
 
 #+begin_src
 ERRORS
@@ -62,5 +75,5 @@ ERRORS
        [ENOENT]		  Directory unlinked but still open.
 #+end_src
 
-These errors seem very edge casey. I think I'll just handle the errors with a
-log and skip for my code.
+Overall, these errors seem very edge casey. I think I'll just handle the errors
+with a log and skip for my code.
