@@ -1,0 +1,191 @@
+#+title: mocking a bit of fs in rust
+#+categories: programming
+#+date: [2025-06-27 Fri]
+
+* About
+
+I have a function that builds a tree of files or folders to represent a
+directory structure.
+
+#+begin_src rust
+  enum Node {
+      File { path: PathBuf },
+      Directory { path: PathBuf, childrens: Vec<Node> },
+  }
+
+  fn build<P: AsRef<Path>>(path: P) -> Result<Vec<Node>, Box<dyn std::error::Error>> {
+      let mut nodes = vec![];
+      for de in std::fs::read_dir(path)? {
+          if let Ok(de) = de {
+              let path = de.path();
+              if path.is_file() {
+                  let node = Node::File { path };
+                  nodes.push(node);
+              } else if path.is_dir() {
+                  let childrens = build(&path)?;
+                  let node = Node::Directory { path, childrens };
+                  nodes.push(node);
+              }
+          }
+      }
+      Ok(nodes)
+  }
+#+end_src
+
+Since the function’s implementation makes calls to the file system, I would need
+to perform side effects on a real file system in order to unit test the
+function.
+
+I set out to extract the dependency so that I could pass in a mock file system
+during testing. This would allow me to test the function without needing side
+effects.
+
+* Identifying the dependencies
+** Approach #1
+
+I first approached the problem by identifying the objects and the methods
+required.
+
+The ~read_dir~ method returns an iterator that returns objects that implement a
+~path()~ method. The ~path()~ method returns an object that implements ~is_file~
+and ~is_dir~.
+
+Consequently, I created traits to describe this:
+
+#+begin_src rust
+  trait MyPathBufMethods : AsRef<Path> {
+      // XXX: suffix the methods to avoid overriding the existing methods
+      fn is_file_(&self) -> bool;
+      fn is_dir_(&self) -> bool;
+  }
+
+  trait MyPathMethods {
+      type Owned: MyPathBufMethods + Sized;
+      fn path(&self) -> Self::Owned;
+  }
+
+  trait MyFsModule {
+      fn read_dir<P: AsRef<Path>>(
+          &self,
+          path: P,
+      ) -> Result<impl Iterator<Item = Result<impl MyPathMethods, Error>>, Error>;
+  }
+#+end_src
+
+Since I am focusing on method implementations over the concrete types, I will
+also need to parametrize the ~Node~ type accordingly:
+
+#+begin_src rust
+  enum Node<T: MyPathMethods> {
+      File { path: T },
+      Directory { path: T, childrens: Vec<Node<T>> },
+  }
+#+end_src
+
+The ~build~ function is now parameterized with dependencies as arguments:
+
+#+begin_src rust
+  fn build<FS: MyFsModule, P: AsRef<Path>>(
+      fs: &FS,
+      path: P,
+  ) -> Result<Vec<Node<impl MyPathBufMethods>>, String> {
+      let mut nodes = vec![];
+      for de in fs.read_dir(path).map_err(|e| e.to_string())? {
+          if let Ok(de) = de {
+              let path = de.path();
+              if path.is_file_() {
+                  let node = Node::File { path };
+                  nodes.push(node);
+              } else if path.is_dir_() {
+                  let childrens = vec![]; // build(fs, &path)?; // XXX: I can't be bothered to figure out the lifetime issue here.
+                  let node = Node::Directory { path, childrens };
+                  nodes.push(node);
+              }
+          }
+      }
+      Ok(nodes)
+  }
+#+end_src
+
+I did not finish the implementation as I struggled with ownership and lifetimes
+around ~childrens~. :(
+
+** Approach #2
+
+In my second approach, I did *not* bother mocking the objects and their methods
+deeply.
+
+Instead, I moved the side effects of parsing files and directories into
+~read_dir~, where they can be mocked.
+
+The ~build~ function only needs to organize files and directories that's being
+fed by ~read_dir~, completely free from side effects.
+
+#+begin_src rust
+  enum FileEntry {
+      File(PathBuf),
+      Directory(PathBuf),
+  }
+
+  trait FileSystem {
+      fn read_dir(
+          &self,
+          path: impl AsRef<Path>,
+      ) -> Result<impl Iterator<Item = FileEntry>, Box<dyn std::error::Error>>;
+  }
+
+  fn build<P: AsRef<Path>>(
+      fs: &impl FileSystem,
+      path: P,
+  ) -> Result<Vec<Node>, Box<dyn std::error::Error>> {
+      let mut nodes = vec![];
+      for de in fs.read_dir(path)? {
+          match de {
+              FileEntry::File(path) => {
+                  let node = Node::File { path };
+                  nodes.push(node);
+              }
+              FileEntry::Directory(path) => {
+                  let childrens = build(fs, &path)?;
+                  let node = Node::Directory { path, childrens };
+                  nodes.push(node);
+              }
+          }
+      }
+      Ok(nodes)
+  }
+#+end_src
+
+** Conclusion
+
+A diagram of the dependencies in the original ~build~ function:
+
+#+begin_src ascii
+read_dir
+ \
+  ReadDir (required methods: next)
+   \
+    DirEntry (required methods: `path`)
+    \
+     PathBuf (required methods: `is_file` and `is_dir`)
+#+end_src
+
+My first approach was to trim down the dependencies to just the required methods
+and mock interfaces.
+
+#+begin_src ascii
+read_dir
+ \
+  impl Iterator<Item = MyPathMethods>
+   \
+    impl MyPathBufMethods
+#+end_src
+
+My second approach was to contain all the side effects in ~read_dir~ and have
+~build~ deal with pure data instead.
+
+#+begin_src
+read_dir
+\
+ impl Iterator<Item = FileEntry>
+#+end_src
