@@ -77,3 +77,9 @@ ERRORS
 
 Overall, these errors seem very edge casey. I think I'll just handle the errors
 with a log and skip for my code.
+
+** Iteration state
+
+The Iterator for ~ReadDir~ does *not* use Rust code to keep a state of the
+iteration. Instead, it uses a [[https://www.gnu.org/software/libc/manual/html_node/Opening-a-Directory.html][directory stream]] that's incremented by subsequent
+~readdir_r~ calls.
