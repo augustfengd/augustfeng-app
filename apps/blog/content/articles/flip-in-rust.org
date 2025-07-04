@@ -1,0 +1,97 @@
+#+title: flip in rust
+#+categories: rust
+#+date: [2025-07-04 Fri]
+
+* About
+
+I challenged myself to implement the flip function on functions that can be
+partially applied.
+
+* Code
+
+** FnOnce -> FnOnce
+
+This flip implementation returns a function that can only be used once.
+
+#+begin_src rust
+  fn flip<'a, A, B, C, F, G>(func: F) -> impl FnOnce(B) -> Box<dyn FnOnce(A) -> C + 'a>
+  where
+      F: Fn(A) -> G + 'a,
+      G: FnOnce(B) -> C,
+      B: 'a,
+  {
+      move |b: B| Box::new(move |a: A| func(a)(b))
+  }
+
+  fn join(a: String) -> impl FnOnce(String) -> String {
+      move |b| format!("{}{}", a, b)
+  }
+
+  pub fn main() {
+      let join_flipped = flip(join);
+      let world_suffix = join_flipped("world".to_string());
+      let helloworld = world_suffix("hello".to_string());
+      println!("{}", helloworld);
+  }
+#+end_src
+
+** FnOnce -> FnOnce on a function that mutates its arguments
+
+This flip implementation will flip a function that mutates.
+
+#+begin_src rust
+  fn flip<'a, A, B, C, F, G>(mut func: F) -> impl FnOnce(B) -> Box<dyn FnOnce(A) -> C + 'a>
+  where
+      F: FnMut(A) -> G + 'a,
+      G: FnOnce(B) -> C,
+      B: 'a,
+  {
+      move |b: B| Box::new(move |a: A| func(a)(b))
+  }
+
+  fn push(data: &mut Vec<String>) -> impl FnOnce(String) {
+      |s| data.push(s)
+  }
+
+  pub fn main() {
+      let mut data: Vec<String> = vec![];
+      let push_flipped = flip(push);
+      push_flipped("hello".to_string())(&mut data);
+      println!("{:?}", data);
+  }
+
+#+end_src
+
+** Fn -> FnOnce (not really working)
+
+This last implementation didn't really work because the closure call doesn't
+seem to let go of a mutable borrow. I'm leaving it in here in case I ever want
+to revisit the challenge in the future:
+
+#+begin_src rust
+  fn flip<'a, A, B, C, F, G>(mut func: F) -> impl Fn(B) -> Box<dyn FnOnce(A) -> C + 'a>
+  where
+      F: FnMut(A) -> G + 'a + Copy,
+      G: FnOnce(B) -> C,
+      B: 'a,
+  {
+      move |b: B| Box::new(move |a: A| func(a)(b))
+  }
+
+  fn push(data: &mut Vec<String>) -> impl FnOnce(String) {
+      |s| data.push(s)
+  }
+
+  pub fn main() {
+      let mut data: Vec<String> = vec![];
+      let push_flipped = flip(push);
+
+      let push_hello = push_flipped("hello".to_string());
+      push_hello(&mut data);
+      push_hello(&mut data); // cannot borrow `data` as mutable more than once at a time [E0499]
+
+      drop(push_flipped);
+
+      println!("{:?}", data);
+  }
+#+end_src
