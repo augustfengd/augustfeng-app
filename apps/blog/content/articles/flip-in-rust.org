@@ -29,8 +29,14 @@ This flip implementation returns a function that can only be used once.
 
   pub fn main() {
       let join_flipped = flip(join);
-      let world_suffix = join_flipped("world".to_string());
-      let helloworld = world_suffix("hello".to_string());
+
+      let hello = "hello".to_string();
+      let world = "world".to_string();
+
+      let world_suffix = join_flipped(world);
+
+      let helloworld = world_suffix(hello);
+
       println!("{}", helloworld);
   }
 #+end_src
@@ -55,8 +61,13 @@ This flip implementation will flip a function that mutates.
 
   pub fn main() {
       let mut data: Vec<String> = vec![];
+
       let push_flipped = flip(push);
-      push_flipped("hello".to_string())(&mut data);
+
+      let helloworld = "helloworld".to_string();
+
+      push_flipped(helloworld)(&mut data);
+
       println!("{:?}", data);
   }
 
@@ -86,9 +97,12 @@ to revisit the challenge in the future:
       let mut data: Vec<String> = vec![];
       let push_flipped = flip(push);
 
-      let push_hello = push_flipped("hello".to_string());
-      push_hello(&mut data);
-      push_hello(&mut data); // cannot borrow `data` as mutable more than once at a time [E0499]
+      let helloworld = "helloworld".to_string();
+
+      let push_helloworld = push_flipped(helloworld);
+
+      push_helloworld(&mut data);
+      push_helloworld(&mut data); // cannot borrow `data` as mutable more than once at a time [E0499]
 
       drop(push_flipped);
 
