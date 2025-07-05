@@ -1,0 +1,308 @@
+#+title: Rust FFI with Swift
+#+categories: rust
+#+date: [2025-07-05 Sat]
+
+* About
+
+I've been thinking about having a frontend for my Rust-based program. The
+[[https://github.com/mozilla/uniffi-rs][uniffi-rs]] project seemed interesting; it's backed by Mozilla.
+
+* Adventure
+** The function
+
+The project has [[https://mozilla.github.io/uniffi-rs/0.27/Getting_started.html][tutorial]] section where it uses an ~add~ function for
+demonstration purposes.
+
+I was ambitious and wanted try some functions with side effects so I opted to
+FFI this file system dependent function instead:
+
+#+begin_src rust
+  uniffi::setup_scaffolding!(); // XXX: necessary to use the proc macros
+
+  use std::{fs::DirEntry, path::PathBuf};
+
+  #[uniffi::export] // XXX: proc macros
+  pub fn ls(path: String) -> Vec<String> {
+      let to_path = |de: DirEntry| de.path();
+      let to_string_try = |pb: PathBuf| pb.into_os_string().into_string();
+
+      match std::fs::read_dir(path) {
+          Ok(dir) => dir
+              .into_iter()
+              .filter_map(Result::ok)
+              .map(to_path)
+              .map(to_string_try)
+              .filter_map(Result::ok)
+              .collect(),
+          Err(_) => Vec::new(),
+      }
+  }
+#+end_src
+
+** The package configuration
+
+The rust package should be a library, and I'd like the package name to reflect
+the compiled library. Consequently, I'm initialize it like this:
+
+#+begin_src shell
+  cargo init --lib --name foobar
+#+end_src
+
+The library should be also compile dynamically so we'll configure the ~lib~
+target in *Cargo.toml*:
+
+#+begin_src toml
+  [lib]
+  crate-type = ["cdylib"]
+  name = "foobar"
+#+end_src
+
+
+We'll also need the uniffi package as dependencies:
+
+#+begin_src shell
+  cargo add uniffi --features cli # XXX: the cli feature is used by 'uniffi-bindgen.rs' in the next section
+  cargo add uniffi --build --features build
+#+end_src
+
+These crates are necessary for the macros used earlier that automatically
+exported the ~ls~ function for FFI.
+
+** Compiling
+
+When we compile the library, we'll also want to compile the bindings used for
+FFI. The uniffi project implements a cli program for this; we just need to
+compile and run it.
+
+Add this target in the *Cargo.toml* file:
+
+#+begin_src toml
+  [[bin]]
+  name = "uniffi-bindgen"
+  path = "uniffi-bindgen.rs"
+#+end_src
+
+Create a ~uniffi-bindgen.rs~ file with this content at the root of the project,
+and we'll be able to run it in one step with cargo.
+
+#+begin_src rust
+  fn main() {
+      uniffi::uniffi_bindgen_main()
+  }
+#+end_src
+
+Finally, let's compile our library and the bindings:
+
+#+begin_src shell
+  # compile the library
+  cargo build --release
+
+  # compile the bindings
+  cargo run --bin uniffi-bindgen generate --library target/release/libfoobar.dylib --language swift --out-dir out
+#+end_src
+
+** Compiled
+
+In the ~out~ directory, I'll have three files now:
+
+#+begin_src text
+  out
+  ├── foobar.swift
+  ├── foobarFFI.h
+  └── foobarFFI.modulemap
+
+  1 directory, 3 files
+#+end_src
+
+The ~foobar.swift~ file will contain our ~ls~ function amongst some
+infrastructure for FFI; it's the bindings.
+
+The ~foobarFFI.h~ header file contains the memory layout of the data structures
+and functions in ~foobar.swift~.
+
+The modulemap file is used by Clang/LLVM and allows us to use the ~import
+foobar~ statement.
+
+** Compiling a swift module
+
+/Disclaimer/: From here on, I'll be honest and admit I don't know the Swift
+ecosystem too well so forgive me if I sound not very helpful.
+
+You'll need to compile the ~foobar.swift~ file and modulemap file into a swift
+module:
+
+#+begin_src shell
+  swiftc \
+      -module-name foobar \
+      -emit-library -o libfoobar.dylib \
+      -emit-module -emit-module-path ./ \
+      -parse-as-library \
+      -L ./target/release/ \
+      -lfoobar \
+      -Xcc -fmodule-map-file=out/foobarFFI.modulemap \
+      out/foobar.swift
+#+end_src
+
+* Usage
+
+In the previous step, the ~swiftc~ command generated a ~foobar.swiftmodule~ file
+and a ~libfoobar.dylib~ file.
+
+There are also other files that I don't know the purpose of /yet/.
+
+** REPL
+
+Nevertheless, with those two files, we can spin up a REPL with Swift and run our
+Rust code!
+
+#+begin_src shell
+  swift repl -I . -L . -l foobar -Xcc -fmodule-map-file=out/foobarFFI.modulemap
+  # import foobar
+  # ls(path: ".")
+#+end_src
+
+** Xcode
+
+I don't know what the typical structure is for FFI projects in Swift, so I'll
+just be copying files into XCode prioritizing illustration purposes:
+
+#+begin_src text
+  tree foobar-*
+  foobar-lib
+  └── libfoobar.dylib
+  foobar-module
+  └── foobar.swiftmodule
+  foobar-modulemap
+  ├── foobarFFI.h
+  └── foobarFFI.modulemap
+
+  3 directories, 4 files
+#+end_src
+
+After copying the ~libfoobar.dylib~ file, we must modify it otherwise the
+application won't find the library at runtime:
+
+#+begin_src shell
+  install_name_tool -id @rpath/libfoobar.dylib libfoobar.dylib
+#+end_src
+
+I don't completely understand the nuances of this, and I might revisit this
+article once I understand it more deeply.
+
+*** Import Path
+
+When we ran the REPL, we provided two search path flags: ~-I~ and ~-L~ flags.
+
+
+The ~-I~ flag provided the search path to find the ~foobar.swiftmodule~ file.
+It's described as:
+
+#+begin_quote
+Add directory to the import search path
+#+end_quote
+
+In XCode, this flag is configured in the *Build Settings* > *Swift Compiler -
+Search Paths* > *Import Paths* configuration.
+
+*** Library Import Path
+
+The ~-L~ flag provided the search path to find ~libfoobar.dylib~. It's described
+as:
+
+#+begin_quote
+Add directory to library link search path
+#+end_quote
+
+In XCode, this is automatically configured when we drag and drop the file into
+the UI.
+
+I *think* it's the *Build Settings* > *Search Paths* > *Library Import Paths*
+configuration.
+
+*** Module Map
+
+The ~-fmodule-map-file=out/foobarFFI.modulemap~ doesn't map to directly to a
+configuration in Xcode because ~Xcc~ means to forward the flag to the Clang
+compiler.
+
+Instead, we'll use the *Build Settings* > *Swifth Compiler - Custom Flags* >
+*Other Swift Flags* configuration and provide two elements:
+
+- -Xcc
+- -fmodule-map-file=$(PROJECT_DIR)/swift.19/foobar-modulemap/foobarFFI.modulemap
+
+Also note that the ~foobarFFI.h~ must be found alongside the
+~foobarFFI.modulemap~ file.
+
+** Application
+
+I won't go into the details of initializing an XCode project, but I'll share the
+content of the source files:
+
+*** ContentView.swift
+
+#+begin_src swift
+  import SwiftUI
+  import foobar
+
+  struct ContentView: View {
+      @State var files = [String]()
+      @State var path = "."
+
+      func ls() {
+          if path.isEmpty {
+              path = ".'"
+          }
+          files = foobar.ls(path: path)
+      }
+
+      var body: some View {
+          VStack {
+              HStack {
+                  Button("ls", action: ls)
+
+                  TextField("Path", text: $path)
+                    .onSubmit(ls)
+              }
+
+              List(0..<files.count, id: \.self) { index in
+                  let name = files[index]
+                  Text(name)
+              }
+          }
+            .frame(width: 250)
+            .frame(minHeight: 300)
+            .navigationTitle("ls")
+            .padding()
+      }
+  }
+#+end_src
+
+*** App.swift
+
+This file is typically prefixed with the name of the project, and not actually
+just App.swift. Nevertheless, here is the content.
+
+#+begin_src swift
+  import SwiftUI
+
+  @main
+  struct Application: App {
+      var body: some Scene {
+          WindowGroup {
+              ContentView()
+          }
+            .windowResizability(.contentSize)
+      }
+  }
+#+end_src
+
+
+* Conclusion
+
+That was a success! I've created my first Swift application with a Rust backend
+using FFI.
+
+
+#+ATTR_HTML: :width 100% :height 100% :class border-2 :alt top :title top
+[[./rust-ffi-with-swift/ls.png]]
