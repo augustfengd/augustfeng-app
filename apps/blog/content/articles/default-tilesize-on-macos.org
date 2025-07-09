@@ -1,0 +1,115 @@
+#+title: default tilesize on macos
+#+categories: swift
+#+date: [2025-07-09 Wed]
+
+* About
+
+I really like to maintain defaults on a system, including preferences. This
+means I like to keep my MacOS's dock tile size to the default size.
+
+I used to grep my *shell* history for this command ~defaults delete
+com.apple.dock "tilesize" && killall Dock~ and re-run it every time the dock got
+resized.
+
+I thought it'd be fun to try to use Swift do to this instead.
+
+* Calculating the existing dock height
+
+The approach suggested by ChatGPT is to use the /NSScreen/ API.
+
+    #+begin_src swift
+      if let screen = NSScreen.main {
+          let fullFrame = screen.frame
+          let visibleFrame = screen.visibleFrame
+          dump(fullFrame)
+          dump(visibleFrame)
+      }
+    #+end_src
+
+When I dump the *NSScreen.frame*, I get this:
+
+#+begin_src text
+▿ (0.0, 0.0, 3840.0, 1600.0)
+  ▿ origin: (0.0, 0.0)
+    - x: 0.0
+    - y: 0.0
+  ▿ size: (3840.0, 1600.0)
+    - width: 3840.0
+    - height: 1600.0
+#+end_src
+
+And when I dump the *NSScreen.visibleFrame*, I get this:
+
+#+begin_src text
+▿ (0.0, 85.0, 3840.0, 1490.0)
+  ▿ origin: (0.0, 85.0)
+    - x: 0.0
+    - y: 85.0
+  ▿ size: (3840.0, 1490.0)
+    - width: 3840.0
+    - height: 1490.0
+#+end_src
+
+I'm on a Dell U3818DW, which has a resolution of 3840 x 1600.
+
+So the difference between the *frame* and *visibleFrame* is a height of 110
+pixels, which should be pixel of height of the dock and menu bar combined.
+
+The menu bar size can be calculated by substracting the ~maxY~'s of the frames:
+
+#+begin_src swift
+  let menuBarHeight = fullFrame.maxY - visibleFrame.maxY
+#+end_src
+
+And finally, the dock height will be what remains:
+
+#+begin_src swift
+  let dockHeight = fullFrame.height - visibleFrame.height - menuBarHeight
+#+end_src
+
+* Discrepency between value read from ~defaults read~ and pixels
+
+On my MacOS, I've customized the dock height a little bit just to have some
+values in the defaults:
+
+#+begin_src shell
+  defaults read com.apple.dock tilesize # 29
+#+end_src
+
+When I use swift to calculate the pixels:
+
+#+begin_src swift
+  if let screen = NSScreen.main {
+      let fullFrame = screen.frame
+      let visibleFrame = screen.visibleFrame
+      let menuBarHeight = fullFrame.maxY - visibleFrame.maxY
+      let dockHeight = fullFrame.height - visibleFrame.height - menuBarHeight
+      print(dockHeight) // 46.0
+  }
+#+end_src
+
+There seems to be difference! Why? Aha, an adventure for another time.
+
+* Oh, I didn't need the existing dock height
+
+Whops, I confused two projects in one. The swift implementation of ~defaults
+delete com.apple.dock "tilesize" && killall Dock~ is actually this:
+
+#+begin_src swift
+  if let defaults = UserDefaults(suiteName: "com.apple.dock") {
+      let key = "tilesize"
+      let tilesize = defaults.object(forKey: key)
+      if tilesize != nil {
+          defaults.removeObject(forKey: key)
+          defaults.synchronize()
+
+          if let dock = NSRunningApplication.runningApplications(
+               withBundleIdentifier: "com.apple.dock"
+             ).first {
+              dock.terminate()
+          }
+      }
+  }
+#+end_src
+
+The dock height is for another project. Fooled ya!
