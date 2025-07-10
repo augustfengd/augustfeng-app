@@ -1,0 +1,176 @@
+#+title: an app that snaps
+#+categories: swift
+#+date: [2025-07-10 Thu]
+
+* About
+
+My productivity at a computer is highly dependent on having shortcuts to snap
+windows.
+
+The MacOS did *not* come have native snapping capabilities until recently. And
+still, it's not all apps that have them enabled.
+
+I've been studying MacOS development for the last month, and thought it was
+finally time that I challenged myself to implementing an actual tool without
+following instructions.
+
+* Adventure
+
+I was very fortunate that the [[https://rectangleapp.com][Rectangle]] project is open. I easily able to find
+the line of code that performed the snapping action.
+
+Note: While my adventure in the codebase was very brief, I was nevertheless
+impressed by the craftmanship in the codebase.
+
+I'm going to dump my entire program (it's not very long). See the snapping
+operation is in the ~snap~ function.
+
+#+begin_src swift
+  import ApplicationServices
+  import Cocoa
+  import Foundation
+
+  enum Direction {
+      case up
+      case down
+      case left
+      case right
+  }
+
+  func parseDirection(from: String) -> Direction? {
+      switch from {
+      case "up":
+          return .up
+      case "down":
+          return .down
+      case "left":
+          return .left
+      case "right":
+          return .right
+      default:
+          return nil
+      }
+  }
+
+  struct Dimension {
+      let menuHeight: CGFloat
+      let height: CGFloat
+      let width: CGFloat
+  }
+
+  func getDimension(of screen : NSScreen) -> Dimension {
+      let full = screen.frame
+      let visible = screen.visibleFrame
+
+      return Dimension(menuHeight: full.maxY - visible.maxY, height: visible.height, width: visible.width)
+  }
+
+  struct Destination {
+      let position: CGPoint
+      let size: CGSize
+  }
+
+
+  func calculateDestination(from: Direction) -> Destination {
+      let screen = NSScreen.main! // XXX: YOLO
+      let dimension = getDimension(of: screen)
+
+      let position: CGPoint
+      let size: CGSize
+
+      switch from {
+      case .up:
+          position = CGPoint(x: 0, y: 0)
+          size = CGSize(width: dimension.width, height: dimension.height / 2)
+      case .down:
+          position = CGPoint(x: 0, y: dimension.height / 2 + dimension.menuHeight)
+          size = CGSize(width: dimension.width, height: dimension.height / 2)
+      case .left:
+          position = CGPoint(x: 0, y: 0)
+          size = CGSize(width: dimension.width / 2, height: dimension.height)
+      case .right:
+          position = CGPoint(x: dimension.width / 2, y: 0)
+          size = CGSize(width: dimension.width / 2, height: dimension.height)
+      }
+      return Destination(position: position, size: size)
+  }
+
+  func getApps() -> [NSRunningApplication] {
+      return NSWorkspace.shared.runningApplications.filter { app in
+          app.activationPolicy == .regular
+      }
+  }
+
+  func getAppBy(name: String, from applications: [NSRunningApplication]) -> NSRunningApplication? {
+      return applications.first { NSRunningApplication in
+          NSRunningApplication.activationPolicy == .regular
+            && NSRunningApplication.localizedName == name
+      }
+  }
+
+  func snap(_ application: NSRunningApplication, to destination: Destination) {
+      let element = AXUIElementCreateApplication(application.processIdentifier)
+      var _windows: CFTypeRef?
+      let result = AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &_windows)
+
+      guard result == .success, let windows = _windows as? [AXUIElement] else {
+          print("Failed to retrieve windows for the application.")
+          return
+      }
+
+      for window in windows {
+          var position = destination.position
+          guard let cgPointValue = AXValueCreate(.cgPoint, &position) else {
+              print("whops on position")
+              return
+          }
+          AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, cgPointValue)
+
+          var size = destination.size
+          guard let cgSizeValue = AXValueCreate(.cgSize, &size) else {
+              print("whops on size")
+              return
+          }
+          AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, cgSizeValue)
+      }
+  }
+
+  func main() {
+      let args = CommandLine.arguments
+      if args.count != 3 {
+          fputs(
+            "Bad argument count. The syntax is `macos-snap <Application Name> <\"up\"|\"down\"|\"left\"|\"right\">\n",
+            stderr)
+          return
+      }
+
+      let apps = getApps()
+
+      guard let app = getAppBy(name: args[1], from: apps) else {
+          print(
+            "Could not find app with name: \(args[1]). These are the available names of the apps that can be snapped:"
+          )
+
+          apps.forEach { NSRunningApplication in
+              if let name = NSRunningApplication.localizedName {
+                  print(" - \(name)")
+              }
+          }
+
+          return
+      }
+
+      guard let direction = parseDirection(from: args[2]) else {
+          print(
+            "Could not parse direction: \(args[2]). Please provide <\"up\"|\"down\"|\"left\"|\"right\"> as direction."
+          )
+          return
+      }
+
+      let destination = calculateDestination(from: direction)
+
+      snap(app, to: destination)
+  }
+
+  main()
+#+end_src
