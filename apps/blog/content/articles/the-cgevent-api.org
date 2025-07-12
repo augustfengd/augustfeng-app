@@ -1,0 +1,154 @@
+#+title: The CGEvent API
+#+categories: swift
+#+date: [2025-07-11 Fri]
+
+* About
+
+I'd like to implement an application that can be opened in a similar manner that
+Ctrl-Space opens *Spotlight*.
+
+I asked ChatGPT to enumerate a few open source projects that deploys these
+feature so I can study how their implementations.
+
+As I read the codebases, I understood that there are many ways to approach this
+implementation.
+
+I was fortunate that the *[[https://github.com/lwouis/alt-tab-macos][alt-tab-macos]]* is open source and documents a list of
+APIs that seem to be able to implement the mechanism. The list includes the
+following APIs:
+
+- CGEvent.tapCreate
+- RegisterEventHotKey/InstallEventHandler
+- NSEvent.addGlobalMonitorForEvents
+- CGSSetHotModifierWithExclusion + CGSSetHotKeyWithExclusion
+- IOHIDManagerRegisterInputValueCallback
+
+I'm going to try experimenting with each API as a way to learn the ecosystem.
+
+For this article, I'm just going to document my learnings on the
+*CGEvent.tapCreate* API.
+
+* Learnings
+** Unmanaged data
+
+In this adventure, I learned about how to use (a bit) the *Umanaged* module to
+handle heap data.
+
+We can increment (indirectly) the reference counter of an object by using the
+~Unmanaged.passRetained~ call on it.
+
+#+begin_src swift
+  let s = "helloworld" as NSString // XXX: We need to use NSString because NSString is a class, and classes are reference types.
+  let s_ : Unmanaged<NSString> = Unmanaged.passRetained(s)
+#+end_src
+
+We can then convert this into a pointer and use it in places where wherever
+~UnsafeMutableRawPointer~ is expected:
+
+#+begin_src swift
+  let ptr = s_.toOpaque() // and then pass this.
+  #+end_src
+
+** Incompatibility between closures and C functions
+
+I also learned about the inability to use closure where a C function is
+expected.
+
+For example, we can *not* do this:
+
+#+begin_src swift
+  let s = "helloworld"
+
+  CGEvent.tapCreate(
+    tap: .cgSessionEventTap,
+    place: .headInsertEventTap,
+    options: .defaultTap,
+    eventsOfInterest: mask,
+    callback: callback,
+    userInfo: { (proxy, type, event, refcon) in
+        print(s) // XXX: A C function cannot be formed from a closure that captures the context.
+        return Unmanaged.passUnretained(event)
+    }
+  )
+#+end_src
+
+Interestingly, the program will compile if you remove the ~print(s)~; it seems
+that Swift doesn't just assume closures capture environments by syntax.
+
+** Ignoring on events
+
+If the callback funcction returns nil instead of an
+~Unmanaged.passUnretained(event)~, then no key strokes will be forwarded to the
+application.
+
+** Different taps
+
+There are three different taps that can be used when creating mach ports:
+
+- ~CGEventTapLocation.cghidEventTap~
+- ~CGEventTapLocation.cgSessionEventTap~
+- ~CGEventTapLocation.cgAnnotatedSessionEventTap~
+
+I experimented on listening to events on all three tap locations, and all
+registered the same events when it came to key presses at the least. 🤷
+
+** Modifiers count as different key presses
+
+The ~keyDown~ event will *not* capture modifier key changes by themselves. You
+also need to use a bitmask for ~flagsChanged~:
+
+#+begin_src swift
+  let mask: CGEventMask = 1 << CGEventType.keyDown.rawValue | 1 << CGEventType.flagsChanged.rawValue
+#+end_src
+
+* Program
+
+Finally, this is the entire program!
+
+#+begin_src swift
+  func register(_ port: CFMachPort) {
+      let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
+      let current = CFRunLoopGetCurrent()
+      CFRunLoopAddSource(current, source, .commonModes)
+      CGEvent.tapEnable(tap: port, enable: true)
+  }
+
+  func main() {
+      let mask: CGEventMask =
+        1 << CGEventType.keyDown.rawValue
+        | 1 << CGEventType.flagsChanged.rawValue
+
+      let callback: CGEventTapCallBack = { (proxy, type, event, refcon) in
+          let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+          switch type {
+          case .flagsChanged:
+              print("Flags changed: \(keyCode)")
+          case .keyDown:
+              print("Key down: \(keyCode)")
+          default:
+              ()
+          }
+          return Unmanaged.passUnretained(event)
+      }
+
+      let port = CGEvent.tapCreate(
+        tap: .cgSessionEventTap,
+        place: .headInsertEventTap,
+        options: .defaultTap,
+        eventsOfInterest: mask,
+        callback: callback,
+        userInfo: nil
+      )
+
+      guard let port = port else {
+          print("Failed to create event tap.") // XXX: this usually happens when the program hasn't been granted accessibility permissions yet
+          return
+      }
+
+      register(port)
+
+      CFRunLoopRun()
+  }
+
+  main()
+#+end_src

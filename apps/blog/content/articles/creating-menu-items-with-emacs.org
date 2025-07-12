@@ -1,4 +1,4 @@
-#+title: creating menu ietms with emacs
+#+title: Creating menu items with emacs
 #+date: [2025-04-21 Mon]
 
 * About
