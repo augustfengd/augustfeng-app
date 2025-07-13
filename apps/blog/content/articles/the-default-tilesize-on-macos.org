@@ -1,4 +1,4 @@
-#+title: default tilesize on macos
+#+title: The default tilesize on macos
 #+categories: swift
 #+date: [2025-07-09 Wed]
 
