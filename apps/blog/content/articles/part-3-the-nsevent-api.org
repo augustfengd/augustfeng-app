@@ -1,0 +1,87 @@
+#+title: Part 3: The NSEvent API
+#+categories: swift
+#+date: [2025-07-13 Sun]
+
+* About
+
+In part 2, I used the deprecated Carbon API to listen for shortcuts. In this
+part, I'll be using what I think is its successor: the *NSEvent* API.
+
+* Learnings
+** NSApplicationDelegate
+
+Like in part 2, this implementation requires an application lifecycle. The
+*NSApplicationDelegate* is able to provide one.
+
+** A global monitoir and a local monitor
+
+When the program is not focused, events are sent to the global monitor. And when
+the program is focused, events are sent to the local monitor.
+** EventTypeMask
+
+The masks provided for the ~matching~ parameter is a list of the same tyep
+provided to the ~CGEvent.tapCreate~ call in *part 1*.
+
+Here, the API uses a list structure as opposed to a ~OR'd~ bitmask.
+
+* Program
+
+Finally,  here's the program!
+
+#+begin_src swift
+  import Cocoa
+  import Foundation
+
+  class Data {
+      var label: NSTextField!
+
+      init() {
+          label = NSTextField(labelWithString: "")
+          label.frame = NSRect(x: 20, y: 130, width: 360, height: 40)
+          label.alignment = .center
+      }
+  }
+
+  class AppDelegate: NSObject, NSApplicationDelegate {
+      var window: NSWindow!
+      var data: Data!
+
+      func applicationDidFinishLaunching(_ notification: Notification) {
+
+          data = Data()
+
+          NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { event in
+              self.data.label.stringValue = "global: \(event.characters!)"
+          }
+
+          NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown],
+            handler: { event in
+                self.data.label.stringValue = "local: \(event.characters!)"
+                return nil // XXX: don't forward on the key presses.
+            })
+
+          let frame = NSRect(x: 0, y: 0, width: 400, height: 300)
+          let style: NSWindow.StyleMask = [.titled, .resizable, .closable]
+          window = NSWindow(
+            contentRect: frame, styleMask: style, backing: .buffered,
+            defer: false)
+          window.title = "Foobar"
+          window.center()
+
+          window.contentView!.addSubview(data.label)
+
+          window.makeKeyAndOrderFront(nil)
+          NSApplication.shared.activate(ignoringOtherApps: true)
+      }
+  }
+
+  func main() {
+      let delegate = AppDelegate()
+      NSApplication.shared.delegate = delegate
+      NSApplication.shared.setActivationPolicy(.regular)
+      NSApplication.shared.run()
+  }
+
+  main()
+#+end_src

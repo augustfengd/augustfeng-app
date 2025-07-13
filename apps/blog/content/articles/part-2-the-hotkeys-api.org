@@ -164,13 +164,10 @@ Finally, here's the program!
   }
 
   func main() {
-      var psn = ProcessSerialNumber(
-        highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))
-      TransformProcessType(&psn, UInt32(kProcessTransformToForegroundApplication))
-
       let app = NSApplication.shared
       let delegate = AppDelegate()
 
+      app.setActivationPolicy(.regular)
       app.delegate = delegate
       app.run()
   }
