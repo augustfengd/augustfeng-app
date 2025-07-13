@@ -35,13 +35,18 @@ That means we must implement *one* handler for *all* actions.
     &handlerRef)
 #+end_src
 
-** signatures and id
+** A signature and some id
 
 The ~RegisterEventHotKey~ API accepts a *signature* and an *id* as argument when
 registering shortcuts.
 
 The *signature* is just a four byte string to describe a /family/ of shortcuts,
 and the *id* is a identifier within that family.
+
+** A global shortcut
+
+When the application is running, the registered shortcuts will trigger the
+handler *even when another application is focused*.
 
 * Program
 
