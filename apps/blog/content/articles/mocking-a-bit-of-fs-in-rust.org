@@ -1,4 +1,4 @@
-#+title: mocking a bit of fs in rust
+#+title: Mocking a bit of fs in rust
 #+categories: programming
 #+date: [2025-06-27 Fri]
 
