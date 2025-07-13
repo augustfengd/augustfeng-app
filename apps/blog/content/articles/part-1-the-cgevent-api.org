@@ -1,4 +1,4 @@
-#+title: The CGEvent API
+#+title: Part 1: The CGEvent API
 #+categories: swift
 #+date: [2025-07-11 Fri]
 

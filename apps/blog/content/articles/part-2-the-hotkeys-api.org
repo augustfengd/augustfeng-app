@@ -1,0 +1,174 @@
+#+title: Part 2: The Hotkeys API
+#+categories: swift
+#+date: [2025-07-13 Sun]
+
+* About
+
+In a previous article, I wrote about how I'd like to learn about all the APIs
+that I use to implement shortcuts in MacOS.
+
+The last article detailed the CGEvent API. In this article, we'll be tackling an
+old deprecated Carbon API.
+
+* Learnings
+** NSApplicationDelegate
+
+Unlike the previous API, this API requires a fully fledged GUI.
+
+I didn't really want to try integrating this deprecated API with SwiftUI, so I
+build the GUI with *NSApplicationDelegate* instead.
+
+The last time I wrote an NSApplicationDelegate was with Objective-C. It was
+actually a pleasant experience to port my demonstration code to Swift.
+
+** Many shortcuts, one handler
+
+This API uses a *single* handler for all shortcuts. This means each time we use
+~InstallEventHandler~, it overwrites the previously installed handler.
+
+That means we must implement *one* handler for *all* actions.
+
+#+begin_src swift
+  //  XXX: the action handler must be able to handle all shortcuts
+  let _ = InstallEventHandler(
+    GetApplicationEventTarget(), action, 1, [eventTypeSpec], data,
+    &handlerRef)
+#+end_src
+
+** signatures and id
+
+The ~RegisterEventHotKey~ API accepts a *signature* and an *id* as argument when
+registering shortcuts.
+
+The *signature* is just a four byte string to describe a /family/ of shortcuts,
+and the *id* is a identifier within that family.
+
+* Program
+
+Finally, here's the program!
+
+#+begin_src swift
+  import Carbon
+  import Cocoa
+
+  class Hotkeys {
+      let modifiers = UInt32(optionKey)
+
+      func register(id: UInt32, keyCode: Int) {
+          var hotKeyRef: EventHotKeyRef?
+
+          let signature: OSType = 0x6162_6364  // XXX: 'abcd' in bytes
+
+          let hotKeyID = EventHotKeyID(
+            signature: signature, id: id)
+
+          let keyCode = UInt32(keyCode)
+
+          let _ = RegisterEventHotKey(
+            keyCode, modifiers, hotKeyID, GetApplicationEventTarget(),
+            0,
+            &hotKeyRef)
+      }
+
+      func install(with data: UnsafeMutableRawPointer?) {
+          var handlerRef: EventHandlerRef?
+
+          let eventTypeSpec = EventTypeSpec(
+            eventClass: UInt32(kEventClassKeyboard),
+            eventKind: UInt32(kEventHotKeyPressed))
+
+          let _ = InstallEventHandler(
+            GetApplicationEventTarget(), action, 1, [eventTypeSpec], data,
+            &handlerRef)
+      }
+
+      let action: EventHandlerUPP = { _, event, data -> OSStatus in
+          let data = Unmanaged<Data>.fromOpaque(data!).takeUnretainedValue()
+          var hotkeyID = EventHotKeyID()
+          let status = GetEventParameter(
+            event!, UInt32(kEventParamDirectObject),
+            EventParamType(typeEventHotKeyID),
+            nil, MemoryLayout<EventHotKeyID>.size, nil, &hotkeyID)
+
+          switch hotkeyID.id {
+          case 1:
+              data.increment()
+              data.show()
+          case 2:
+              data.decrement()
+              data.show()
+          default:
+              break
+          }
+          return 0
+      }
+  }
+
+  class Data {
+      var label: NSTextField!
+      var counter: Int = 0
+
+      init() {
+          label = NSTextField(labelWithString: "0")
+          label.frame = NSRect(x: 20, y: 130, width: 360, height: 40)
+          label.alignment = .center
+      }
+
+      func increment() {
+          counter += 1
+      }
+
+      func decrement() {
+          counter -= 1
+      }
+
+      func show() {
+          label.stringValue = "\(counter)"
+      }
+  }
+
+  class AppDelegate: NSObject, NSApplicationDelegate {
+      var window: NSWindow!
+      var data: Data!
+
+      func applicationDidFinishLaunching(_ notification: Notification) {
+
+          let frame = NSRect(x: 0, y: 0, width: 400, height: 300)
+          let style: NSWindow.StyleMask = [.titled, .resizable, .closable]
+          window = NSWindow(
+            contentRect: frame, styleMask: style, backing: .buffered,
+            defer: false)
+
+          window.title = "Foobar"
+          window.center()
+
+          data = Data()
+
+          let hotkeys = Hotkeys()
+          hotkeys.register(id: 1, keyCode: kVK_UpArrow)
+          hotkeys.register(id: 2, keyCode: kVK_DownArrow)
+
+          let ptr = Unmanaged.passUnretained(self.data).toOpaque()
+          hotkeys.install(with: ptr)
+
+          window.contentView!.addSubview(data.label)
+
+          window.makeKeyAndOrderFront(nil)
+          NSApplication.shared.activate(ignoringOtherApps: true)
+      }
+  }
+
+  func main() {
+      var psn = ProcessSerialNumber(
+        highLongOfPSN: 0, lowLongOfPSN: UInt32(kCurrentProcess))
+      TransformProcessType(&psn, UInt32(kProcessTransformToForegroundApplication))
+
+      let app = NSApplication.shared
+      let delegate = AppDelegate()
+
+      app.delegate = delegate
+      app.run()
+  }
+
+  main()
+#+end_src
