@@ -1,4 +1,4 @@
-#+title: flip in rust
+#+title: Implementing flip in rust
 #+categories: rust
 #+date: [2025-07-04 Fri]
 
