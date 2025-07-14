@@ -1,0 +1,181 @@
+#+title: Part 5: The IOKit API
+#+categories: swift
+#+date: [2025-07-14 Mon]
+
+* About
+
+We're at the last part of the series! This part will explore the IO framework.
+
+* Learnings
+** Enumerating all HID devices
+
+This program will enumerate all HID devices:
+
+#+begin_src swift
+  import Foundation
+  import IOKit
+  import IOKit.hid
+
+  func run(and cb: IOHIDDeviceCallback) {
+      let manager = IOHIDManagerCreate(
+        kCFAllocatorDefault,
+        0x0  // https://developer.apple.com/documentation/iokit/1645245-anonymous/kiohidmanageroptionnone
+      )
+
+      let matching: [CFString: NSNumber] = [:]
+
+      // Match everything for now
+      IOHIDManagerSetDeviceMatching(manager, matching as NSDictionary)
+
+      // Schedule the manager
+      IOHIDManagerScheduleWithRunLoop(
+        manager,
+        CFRunLoopGetMain(),
+        CFRunLoopMode.defaultMode!.rawValue
+      )
+
+      // print reference when a matching device is detected
+      IOHIDManagerRegisterDeviceMatchingCallback(
+        manager,
+        { (_,_,_, device) in
+            print(device)
+        },
+        nil)
+
+      // Start the manager
+      let _ = IOHIDManagerOpen(
+        manager,
+        IOOptionBits(kIOHIDOptionsTypeNone) // XXX: use `kIOHIDOptionsTypeSeizeDevice~ to perform an exclusive link when matching
+      )
+      CFRunLoopRun()
+  }
+
+  run()
+#+end_src
+
+I'm interested in using my *ZSA Moonlander* as input device, so I identified its
+*Vendor ID* and *Product ID*.
+
+#+begin_src text
+<IOHIDDevice 0x1398051f0 [0x1fc998998]  'ClassName=AppleUserUSBHostHIDDevice' Transport=USB VendorID=12951 ProductID=6505 Manufacturer=ZSA Technology Labs Product=Moonlander Mark I PrimaryUsagePage=1 PrimaryUsage=2 ReportInterval=1000>
+#+end_src
+
+** Run on matches
+
+Using the *Vendor ID* and *Product ID* from the previous steps, we can configure
+the *IOHIDManager* to only match my device.
+
+#+begin_src swift
+  let matching: [CFString: NSNumber] = [
+    kIOHIDVendorIDKey as CFString: NSNumber(value: 12951),
+    kIOHIDProductIDKey as CFString: NSNumber(value: 6505),
+  ]
+#+end_src
+
+Finally, we register an ~IOHIDValueCallback~ to react to input events:
+
+#+begin_src swift
+  IOHIDManagerRegisterInputValueCallback(
+    manager,
+    { (_, _, _, v) in
+        print(IOHIDValueGetIntegerValue(v))
+    }, nil)
+#+end_src
+
+** Many callback invocations for a single press
+
+The callback function gets invoked many times for a single key press. When I
+hold the space key down, I see four integers printed:
+
+#+begin_src text
+  44
+  0
+  1
+  44
+#+end_src
+
+The ~44~ value reflects the stand HID value for space key. I'm not sure what the
+other 0 and 1 means.
+
+And when I lift the space key up, I see another four integers printed:
+
+#+begin_src text
+  0
+  0
+  0
+  0
+#+end_src
+
+** Privacy & Security
+
+In the previous parts, the progams asked for permissions in *Accessbility*. This
+API requested access in *Input Monitoring* instead.
+
+* Program
+
+In my other parts, I actually implemented a shortcut to have effects. In this
+part, I think I'll stop at a simple callback usage.
+
+This API is very low level and I don't want to take on the challenge of
+implementing a shortcut using such low level primitives at this moment.
+
+Nevertheless, here's the program at its completion with just a simple callback
+usage!
+
+#+begin_src swift
+  import Foundation
+  import IOKit
+  import IOKit.hid
+
+  func run() {
+      let manager = IOHIDManagerCreate(
+        kCFAllocatorDefault,
+        0x0  // https://developer.apple.com/documentation/iokit/1645245-anonymous/kiohidmanageroptionnone
+      )
+
+      let matching: [CFString: NSNumber] = [
+        kIOHIDVendorIDKey as CFString: NSNumber(value: 12951),
+        kIOHIDProductIDKey as CFString: NSNumber(value: 6505),
+      ]
+
+      // Match everything for now
+      IOHIDManagerSetDeviceMatching(manager, matching as NSDictionary)
+
+      // Schedule the manager
+      IOHIDManagerScheduleWithRunLoop(
+        manager,
+        CFRunLoopGetMain(),
+        CFRunLoopMode.defaultMode!.rawValue
+      )
+
+      // Run when a matching device is detected
+      IOHIDManagerRegisterDeviceMatchingCallback(
+        manager,
+        { (_, _, _, device) in
+            print(device)
+        },
+        nil)
+
+      IOHIDManagerRegisterInputValueCallback(
+        manager,
+        { (_, _, _, v) in
+            print(IOHIDValueGetIntegerValue(v))
+        }, nil)
+
+      // Start the manager
+      let _ = IOHIDManagerOpen(
+        manager,
+        IOOptionBits(kIOHIDOptionsTypeNone)
+      )
+
+      CFRunLoopRun()
+  }
+
+  run()
+#+end_src
+
+* References
+
+- In this [[https://medium.com/@maxchuquimia/create-a-punchable-tag-build-button-f5264cf50d7a][post]], Max Chuquimia describes how he used the IOKit API to implement a
+  physical *Tag & Build* button.
+
