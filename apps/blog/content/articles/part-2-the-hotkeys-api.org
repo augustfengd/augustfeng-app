@@ -1,4 +1,4 @@
-#+title: Part 2: The Hotkeys API
+#+title: Part 2: The HotKeys API
 #+categories: swift
 #+date: [2025-07-13 Sun]
 
@@ -70,7 +70,10 @@ Finally, here's the program!
           let keyCode = UInt32(keyCode)
 
           let _ = RegisterEventHotKey(
-            keyCode, modifiers, hotKeyID, GetApplicationEventTarget(),
+            keyCode,
+            modifiers,
+            hotKeyID,
+            GetApplicationEventTarget(),
             0,
             &hotKeyRef)
       }

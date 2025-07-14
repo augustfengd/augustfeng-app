@@ -1,0 +1,241 @@
+#+title: Part 4: The CGS API
+#+categories: swift
+#+date: [2025-07-13 Sun]
+
+* About
+
+This is an interesting one! The CGS API is not public one so I'm getting no help
+from the IDE.
+
+* Learnings
+** @_silgen_name
+
+The ~@_silgen_name~ attribute used to called ~@asmname~, and Russ Bishop likens
+it to ~DllImport~ or ~extern~.
+
+I have experience with the later too so I understand we're going to ask the
+compiler to find the implementation in elsewhere.
+
+I was lucky and found an open source project that did the work of the function
+signatures so that I don't need to (learn and) reverse the library myself.
+
+#+begin_src swift
+  fileprivate typealias CGSConnectionID = UInt
+
+  @_silgen_name("CGSMainConnectionID")
+  fileprivate func CGSMainConnectionID() -> CGSConnectionID
+
+  @_silgen_name("CGSSetHotKeyWithExclusion")
+  fileprivate func CGSSetHotKeyWithExclusion(_ connection: CGSConnectionID,
+                                             _ hotKeyID: Int,
+                                             _ hotKeyMask: UInt16,
+                                             _ keyCode: UInt16,
+                                             _ modifierFlags: UInt64,
+                                             _ options: Int8) -> CGError
+#+end_src
+
+** CGS Modifier Flags vs NSEvent.ModifierFlags
+
+The ~NSEvent.ModifierFlags~ used in Part 3 are constructed from *UInt*, which
+depends on the platform architecture the program is compiled on.
+
+The modifier flags that ~CGSSetHotKeyWithExclusion~ are strictly *UInt64*, so
+we'll need to cast it:
+
+#+begin_src swift
+  let option = UInt64(NSEvent.ModifierFlags.option)
+#+end_src
+
+** CGKeyCode vs Carbon API
+
+The Carbon API uses an *Int* describe the size of the key code while the
+CGKeyCode used in CGS API is explicitly *UInt16*.
+
+We can convert the constants in the Carbon API into CGKeyCode values:
+
+#+begin_src swift
+  let keyCode: CGKeyCode = UInt16(kVK_ANSI_H)
+#+end_src
+
+** Carbon's HotKey API
+
+In *part 2*, we studied the ~RegisterEventHotKey~ API from the Carbon framework.
+Aditya Vaidyam used Hopper to disassemble
+~/System/Library/Carbon.framework/Frameworks/HIToolbox.framework~ and learned
+that the ~RegisterEventHotKey~ actually uses the CGS API underneath!
+
+** NSEvent API
+
+In *part 3*, we used the NSEvent API to listen for shortcuts. It seems like the
+CGS API relies on the same infrastructure *with a caveat*.
+
+Earlier, we using a NSEvent.EventTypeMask for ~.keyDown~ events and then finding
+key combinations we were interested in.
+
+When we register hotkeys with the CGS API, the events are masked with
+~.systemDefined~ instead.
+
+Also, the hot key ID will be configured on the event's ~.data1~ property:
+
+#+begin_src swift
+  NSEvent.addLocalMonitorForEvents(matching: .systemDefined) { event in
+      print(event.data1) // XXX: the hot key id signature
+      return event
+  }
+#+end_src
+
+** Compiling without XCode
+
+This experiment was initialized from a ~swift package init --type executable~
+command.
+
+It seems that XCode does a bit of magic which allows us to make calls to main
+actor-isolated instances without too much fuss.
+
+If I wanted to use the ~NSApplication.shared~ object, I had to annotate the
+function with ~@MainActor~:
+
+#+begin_src swift
+  @MainActor
+  func main() {
+      register(identifier: 0, keyCode: UInt16(kVK_UpArrow))
+      register(identifier: 1, keyCode: UInt16(kVK_DownArrow))
+      monitor()
+
+      let app = NSApplication.shared
+      let delegate = AppDelegate()
+
+      app.setActivationPolicy(.regular)
+      app.delegate = delegate
+      app.run()
+  }
+#+end_src
+
+
+* The Program
+
+Since I was running this experiment with the ~swift run~ command, I could see
+the print statements having effect in the terminal.
+
+Therefore I didn't bother implementing a UI to see the side effects and just
+relied on print statements.
+
+#+begin_src swift
+  import AppKit
+  import Carbon  // XXX: Only imported to get and translate 'H' key code into CGKeyCode
+  import Foundation
+
+  @_silgen_name("CGSMainConnectionID")
+  private func CGSMainConnectionID() -> UInt
+
+  @_silgen_name("CGSSetHotKeyWithExclusion")
+  private func CGSSetHotKeyWithExclusion(
+    _ connection: UInt,
+    _ hotKeyID: Int,
+    _ hotKeyMask: UInt16,
+    _ keyCode: UInt16,
+    _ modifierFlags: UInt64,
+    _ options: Int8
+  ) -> CGError
+
+  @_silgen_name("CGSSetHotKeyType")
+  private func CGSSetHotKeyType(
+    _ connection: UInt,
+    _ hotKeyID: Int,
+    _ options: Int8
+  ) -> CGError
+
+  @_silgen_name("CGSSetHotKeyEnabled")
+  private func CGSSetHotKeyEnabled(
+    _ connection: UInt,
+    _ hotKeyID: Int,
+    _ enabled: Bool
+  ) -> CGError
+
+  @_silgen_name("CGSIsHotKeyEnabled")
+  private func CGSIsHotKeyEnabled(
+    _ connection: UInt,
+    _ hotKeyID: Int
+  ) -> Bool
+
+  @_silgen_name("CGSRemoveHotKey")
+  private func CGSRemoveHotKey(
+    _ connection: UInt,
+    _ hotKeyID: Int
+  ) -> CGError
+
+  func isEnabled(identifier: Int) -> Bool {
+      let connection = CGSMainConnectionID()
+      return CGSIsHotKeyEnabled(connection, identifier)
+  }
+
+  func register(identifier: Int, keyCode: CGKeyCode) {
+      let connection = CGSMainConnectionID()
+      let hotKeyId = identifier
+      let hotKeyMask = UInt16(0xffff)
+      let keyCode = keyCode
+      let modifiers = UInt64(NSEvent.ModifierFlags.option.rawValue)
+      let exclusion = Int8(0x0)
+
+      let _ = CGSSetHotKeyWithExclusion(
+        connection,
+        hotKeyId,
+        hotKeyMask,
+        keyCode,
+        modifiers,
+        exclusion)
+  }
+
+  func monitor() {
+      NSEvent.addLocalMonitorForEvents(matching: .systemDefined) { event in
+          switch event.data1 {
+          case 0:
+              print("hot key 1")
+          case 1:
+              print("hot key 2")
+          default:
+              print("hot key unknown")
+          }
+          return event
+      }
+  }
+
+  class AppDelegate: NSObject, NSApplicationDelegate {
+      var window: NSWindow!
+
+      func applicationDidFinishLaunching(_ notification: Notification) {
+          let frame = NSRect(x: 0, y: 0, width: 400, height: 300)
+          let style: NSWindow.StyleMask = [.titled, .resizable, .closable]
+          window = NSWindow(
+            contentRect: frame, styleMask: style, backing: .buffered,
+            defer: false)
+          window.title = "Foobar"
+          window.center()
+
+          window.makeKeyAndOrderFront(nil)
+          NSApplication.shared.activate(ignoringOtherApps: true)
+      }
+  }
+
+  @MainActor
+  func main() {
+      register(identifier: 0, keyCode: UInt16(kVK_UpArrow))
+      register(identifier: 1, keyCode: UInt16(kVK_DownArrow))
+      monitor()
+
+      let app = NSApplication.shared
+      let delegate = AppDelegate()
+
+      app.setActivationPolicy(.regular)
+      app.delegate = delegate
+      app.run()
+  }
+
+  main()
+#+end_src
+
+* References
+
+- The [[http://www.russbishop.net/swift-don-t-do-this][post]] where Russ Bishop likens ~@_silgen_name~ to ~DllImport~ or ~extern~.
+
+- The [[https://medium.com/@avaidyam/building-a-better-registereventhotkey-900afd68f11f][post]] where Aditya Vaidyam studied the ~CGS~ API.
