@@ -178,4 +178,3 @@ usage!
 
 - In this [[https://medium.com/@maxchuquimia/create-a-punchable-tag-build-button-f5264cf50d7a][post]], Max Chuquimia describes how he used the IOKit API to implement a
   physical *Tag & Build* button.
-

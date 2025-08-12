@@ -1,0 +1,23 @@
+#+title: compiling-zsh-on-macos
+#+date: [2025-08-12 Tue]
+
+* About
+
+There are some obstacles in a successful build of zsh on MacOS due to [[https://www.w3.org/Tools/YODL.html][yodl]] not
+being readily distributed for MacOS.
+
+This isn't too concerning, but it does make the build command exit with an
+error, which can fail an automation.
+
+In my situation, this fails the required build step for a [[https://www.jetbrains.com/help/clion/makefiles-support.html#rd-configs][Native Application]]
+configuration in CLion; I can't build and run/debug the program in one command.
+
+* Workaround
+
+At first I looked into compiling the yodl program locally, but it relies on a
+build program that isn't readily distributed either on MacOS.
+
+Instead digging myself a rabbit hole grave, I just removed the ~install.man
+install.runhelp~ requirements from the ~install~ target in the Makefile.
+
+/Hint/: I edited the ~Makefile.in~ because the Makefile is generated.

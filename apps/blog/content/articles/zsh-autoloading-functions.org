@@ -1,0 +1,138 @@
+#+title: Zsh Autoloading Functions
+#+date: [2025-08-11 Mon]
+
+* About
+
+These autoloaded functions be weyward.
+
+* Experiments
+** function definition file with a definition and a command
+
+Let's say there's a function file named ~foobar~ with following content in our
+*fpath* variable:
+
+#+begin_src zsh
+  foobar() {
+      echo helloworld
+  }
+
+  echo bonjour
+#+end_src
+
+When we ~autoload foobar~, the ~foobar~ function will be marked as /undefined/
+and have this content:
+
+#+begin_src shell
+  foobar () {
+      # undefined
+      builtin autoload -X
+  }
+#+end_src
+
+On the first usage of the ~foobar~ command, it'll print =bonjour= and its
+definition will be this:
+
+#+begin_src shell
+  foobar () {
+      echo helloworld
+  }
+#+end_src
+
+Subsequent execution of the command will print =helloworld=.
+
+My interpretation of this is that when ~foobar~ was ran for the first time, it
+took on the content of the entire file as definition before executing itself.
+
+And when it executed itself, it redefined itself and performed the commands as
+side effects.
+
+When it performed the commands as side effects during that execution is when we
+saw "bonjour" being printed, and the subsequent executions used the redefined
+~foobar~ function.
+
+** function definition file with only a definition
+
+Let's say the content of the function file was just a function definition:
+
+#+begin_src zsh
+  foobar() {
+      echo helloworld
+  }
+#+end_src
+
+On the first usage of the ~foobar~ command, it'll print "helloworld".
+
+This doesn't really align with the process in the previous experiment though; if
+it took on the content of the entire file as definition and then executed
+itself, it would just be performing a redefinition and not printing anything.
+
+I suspect what's happening is that Zsh realized the content was only a simple
+function definition, so it executed the content and executed the redefined
+function.
+
+This is what the shell would do to any file when the *KSH_AUTOLOAD* option is
+set.
+
+** function definition file with a definition and a command using KSH_AUTOLOAD
+
+This experiment uses the same content as one of the experiment above, but with
+the *KSH_AUTOLOAD* option set.
+
+Hint: You can set the *KSH_AUTOLOAD* option by running ~setopt KSH_Autoload~.
+
+#+begin_src zsh
+  foobar() {
+      echo helloworld
+  }
+
+  echo bonjour
+#+end_src
+
+On the first usage of the ~foobar~ command, it'll print "bonjour" and
+"helloworld".
+
+Subsequent usages will only print "helloworld".
+
+The way I interpret this is that the shell will execute the content, which
+includes a redefinition of the function and then execute the function again
+which has been redefined.
+
+** Replicating the KSH_AUTOLOAD option
+
+We can replicate the effects of KSH_AUTOLOAD by calling the redefined function
+ourselves:
+
+#+begin_src zsh
+  echo bonjour
+
+  foobar() {
+      echo helloworld
+  }
+
+  foobar
+#+end_src
+
+This is what's described in the official documentation, although they placed the
+initialization code at the end and don't have a call to the redefined function.
+
+* Interpretations and confirmations
+
+Earlier, I mentioned how ~foobar~ would take on the content of the entire file
+as definition before executing itself.
+
+We couldn't confirm this with a ~functions foobar~ command because its the
+function is /undefined/ until its first execution.
+
+We can early load the function with ~autoload +X foobar~ and see what would be
+executed:
+
+#+begin_src zsh
+  functions foobar
+  foobar () {
+      foobar () {
+          echo helloworld
+      }
+      echo bonjour
+      foobar "$@"
+  }
+#+end_src
