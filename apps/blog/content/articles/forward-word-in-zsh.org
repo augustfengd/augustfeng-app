@@ -1,0 +1,23 @@
+#+title: forward word in zsh
+#+date: [2025-08-13 Wed]
+* About
+
+
+In Emacs, the *M-f* key sequence is bound to ~forward-word~ moves the cursor to
+the _end_ of the current word.
+
+
+In Zsh, the *M-f* key sequence is also bound to ~forward-word~, but it moves the
+cursor to the _beginning_ of the next word.
+
+* Preferences
+
+I've been allowing this inconsistency for far too long when Zsh provides a
+standard widget that implements the same behaviour as Emacs:
+~emacs-forward-word~.
+
+Let's just rebind it now:
+
+#+begin_src zsh
+  bindkey "^[f" emacs-forward-word
+#+end_src
