@@ -38,7 +38,7 @@ Ultimately, the pre-configuration now appears as follows:
   which autoreconf >/dev/null && autoreconf --install --force --verbose "${PROJECT_DIR:-..}" 2>&1; /bin/sh "${PROJECT_DIR:-..}/configure" --prefix=${PROJECT_DIR:-..}/build/usr/local --enable-zsh-debug
 #+end_src
 
-* Challenges in Compiling on macOS
+* Difficult compilation on MacOS
 
 There are some obstacles in a successful build of zsh on MacOS due to [[https://www.w3.org/Tools/YODL.html][yodl]] not
 being readily distributed for MacOS.
