@@ -1,0 +1,60 @@
+#+title: Compiling Zsh on macOS with CLion
+#+date: [2025-08-12 Tue]
+
+* Configuring Pre-Configuration
+
+The Zsh project includes a ~Util/preconfig~ script that generates the
+~configure~ script.
+
+CLion is also capable of building the ~configure~ script (and executing it
+afterwards) using the *pre-configuration* command in the *Build, Execution,
+Deployment > Makefile* settings.
+
+Since the Zsh project compiles shared libraries, it is important for the program
+to locate them at runtime.
+
+Initially, I set the *DESTDIR* variable for ~make~, but it didn’t affect where
+the program looked for the shared libraries.
+
+However, the *Makefile* indicates that configuring the `--prefix` does influence
+the linker flags:
+
+#+begin_src makefile
+  prefix          = /Users/augustfeng/repositories/sf/zsh/build/usr/local
+  exec_prefix     = ${prefix}
+  bindir          = ${exec_prefix}/bin
+  libdir          = ${exec_prefix}/lib
+#+end_src
+
+Additionally, to facilitate debugging, I needed to enable `--enable-zsh-debug`.
+
+Ultimately, the pre-configuration now appears as follows:
+
+#+begin_src sh
+  #!/bin/sh
+  #
+  # GNU Autotools template; feel free to customize.
+  #
+  which autoreconf >/dev/null && autoreconf --install --force --verbose "${PROJECT_DIR:-..}" 2>&1; /bin/sh "${PROJECT_DIR:-..}/configure" --prefix=${PROJECT_DIR:-..}/build/usr/local --enable-zsh-debug
+#+end_src
+
+* Challenges in Compiling on macOS
+
+There are some obstacles in a successful build of zsh on MacOS due to [[https://www.w3.org/Tools/YODL.html][yodl]] not
+being readily distributed for MacOS.
+
+This isn't too concerning, but it does make the build command exit with an
+error, which can fail a bigger automation.
+
+In my situation, this fails the required build step for a [[https://www.jetbrains.com/help/clion/makefiles-support.html#rd-configs][Native Application]]
+configuration in CLion; I can't build and run/debug the program in one command.
+
+* Workaround
+
+At first I looked into compiling the yodl program locally, but it relies on a
+build program that isn't readily distributed either on MacOS.
+
+Instead digging myself a rabbit hole grave, I just removed the ~install.man
+install.runhelp~ requirements from the ~install~ target in the Makefile.
+
+/Hint/: I edited the ~Makefile.in~ because the Makefile is generated.
