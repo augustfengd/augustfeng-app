@@ -1,0 +1,120 @@
+#+title: Special Character Kill
+#+date: [2025-08-19 Tue]
+
+* About
+
+I'm studying a few chapters from The Linux Programming Interface book, and I'm
+learning about how the terminal driver can interpret special characters.
+
+* The KILL character
+
+The *KILL* character (typically sent by ~Control-U~) should make the terminal
+driver to delete the current line on the terminal.
+
+We can use ~stty -a~ to see what *KILL* is bound to:
+
+#+begin_src text
+speed 9600 baud; 102 rows; 271 columns;
+lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl
+	-echoprt -altwerase -noflsh -tostop -flusho pendin -nokerninfo
+	-extproc
+iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8
+	-ignbrk brkint -inpck -ignpar -parmrk
+oflags: opost onlcr -oxtabs -onocr -onlret
+cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow
+	-dtrflow -mdmbuf
+cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;
+	min = 1; quit = ^\; reprint = ^R; start = ^Q; status = ^T;
+	stop = ^S; susp = ^Z; time = 0; werase = ^W;
+#+end_src
+
+Normally, the shell will also implement a kill-line behaviour on ~Control-U~
+though, so if the terminal driver doesn't clear it, at least the shell will:
+
+#+begin_src shell
+  bindkey | grep '\^U' # zsh
+  # "^U" kill-whole-line
+#+end_src
+
+* I'm confused
+
+If I unbind the key sequence ~^U~ in the shell, I should still expect the line
+to be cleared when I send ~^U~ because the terminal driver should've handled the
+special character before it reaches the shell.
+
+/Hint/: The key sequence can be unbound on zsh with ~bindkey -r '^U'~.
+
+* Now you see me, now you don't
+
+Earlier I mentioned how the terminal driver should handle ~^U~, but this is only
+when the terminal is set in *canonical* mode.
+
+In the ~stty -a~ dump, we could see that the terminal is in *canonical* mode
+because there's no ~-~ in front of *icanon*.
+
+But this is a lie! The zsh shell is enabling *canonical* mode when we enter a
+command, and turns it off during line editing!
+
+We can find the shell's pseudoterminal slave file descriptor, and inspect it in
+using another shell to see its terminal's attribute in a normal line editing
+context:
+
+#+begin_src text
+speed 9600 baud; 100 rows; 271 columns;
+lflags: -icanon isig iexten -echo echoe -echok echoke -echonl echoctl
+	-echoprt -altwerase -noflsh -tostop -flusho -pendin -nokerninfo
+	-extproc
+iflags: -istrip icrnl inlcr -igncr -ixon -ixoff ixany imaxbel iutf8
+	-ignbrk brkint -inpck -ignpar -parmrk
+oflags: opost onlcr -oxtabs -onocr -onlret
+cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow
+	-dtrflow -mdmbuf
+cchars: discard = <undef>; dsusp = <undef>; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U;
+	lnext = <undef>; min = 1; quit = <undef>; reprint = ^R;
+	start = <undef>; status = ^T; stop = <undef>; susp = <undef>;
+	time = 0; werase = ^W;
+#+end_src
+
+Let's see a diff!
+
+#+begin_src diff
+2,3c2,3
+< lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl
+< 	-echoprt -altwerase -noflsh -tostop -flusho pendin -nokerninfo
+---
+> lflags: -icanon isig iexten -echo echoe -echok echoke -echonl echoctl
+> 	-echoprt -altwerase -noflsh -tostop -flusho -pendin -nokerninfo
+5c5
+< iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8
+---
+> iflags: -istrip icrnl inlcr -igncr -ixon -ixoff ixany imaxbel iutf8
+10,13c10,14
+< cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;
+< 	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;
+< 	min = 1; quit = ^\; reprint = ^R; start = ^Q; status = ^T;
+< 	stop = ^S; susp = ^Z; time = 0; werase = ^W;
+---
+> cchars: discard = <undef>; dsusp = <undef>; eof = ^D; eol = <undef>;
+> 	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U;
+> 	lnext = <undef>; min = 1; quit = <undef>; reprint = ^R;
+> 	start = <undef>; status = ^T; stop = <undef>; susp = <undef>;
+> 	time = 0; werase = ^W;
+#+end_src
+
+Wow, some considerable differences.
+
+* Confirmation
+
+In order to confirm our findings, we can re-enable some of the required terminal
+attributes and see that ~^U~ will cause a line deletion operation from the
+terminal driver.
+
+In another shell, we run ~stty -f /dev/ttys001 icanon echo inlcr~.
+
+In our original shell, we can now use ~^U~ and see the terminal driver delete
+the line.
+
+/Hint/: If you press *Enter*, then zsh will have an opportunity to reset the
+terminal attributes to its likings.
