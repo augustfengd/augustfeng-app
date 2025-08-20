@@ -1,0 +1,30 @@
+#+title: debugging Spacemacs initialization
+#+date: [2025-08-20 Wed]
+
+* About
+
+Earlier today I introduced a bug somewhere in Emacs and decided to delete and
+reinstall Spacemacs, while keeping my ~~/.spacemacs~ configuration.
+
+This introduced another bug where *auth-source* was not able to read my Open API
+API anymore. This expression kept evaluating to ~nil~:
+
+#+begin_src elisp
+  (auth-source-search
+   :host "api.openai.com"
+   :user "apikey"
+   :require '(:secret)
+   )
+#+end_src
+
+* Progress
+
+I noticed that if I evaluated ~auth-source-forget-all-cached~, the expression
+above would successfully find my credentials.
+
+And after some more debugging, I discovered a credential in the password cache
+(~password-data~ variable) that wasn't in ~~/.authinfo.gpg~.
+
+In order to find who was inserting this data, I added a ~(debug-on-entry
+'password-cache-add)~ in ~~/.emacs.d/init.el~ and found the culprit in the stack
+traces.
