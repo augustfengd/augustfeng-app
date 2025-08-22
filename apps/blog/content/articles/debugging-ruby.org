@@ -1,0 +1,94 @@
+#+title: Debugging Ruby
+#+date: [2025-08-22 Fri]
+
+* About
+
+When I run ~brew tap --force hombrew/core~, *brew* attempts to use
+the ~gh~ cli and doesn't find it.
+
+I'm assuming this is because brew is re-configuring its *search path* and
+dropping ~$(brew --prefix)/bin~.
+
+Still, I'm curious why it's choosing to use ~gh~ so I tried debugging the script
+and discovered an ecosystem of debuggers, not fun.
+
+I also remembered that I have RubyMine, so I wanted to debug brew *using* with
+the constraint of using RubyMine.
+
+* RubyMine debugging
+
+When [[https://www.jetbrains.com/help/ruby/debugging-code.html][debugging]] with RubyMine, the IDE requires *debase* and *ruby-debug-ide*
+gems. The editor offer to install this if they're not installed when debugging:
+
+#+begin_src shell
+  /usr/bin/ruby /usr/bin/gem install debase-2.3.16.gem --no-document --user-install ruby-debug-ide-2.3.25.gem --no-document --user-install
+#+end_src
+
+* Debuggers
+** ruby-debug
+*** Gems
+
+The *debase* gem is an implementation of an old and standard debugger
+(~debug.rb~), made by the *ruby-debug* team.
+
+They also make *ruby-debug-ide* gem, which is used to integrate a debugger that
+may be running locally or remotely to an IDE.
+
+The project is supposedly not maintained anymore, and the [[https://github.com/ruby-debug/ruby-debug/issues/32#issuecomment-2447050047][JetBrains team have
+been maintaining a fork of the project for their IDE]].
+
+*** Usage
+
+The *ruby-debug-ide* comes with the ~rdebug-ide~ cli, which is used to start
+ruby scripts and wait for an IDE to attach it.
+
+In RubyMine, we need to create a *Ruby remote debug* [[https://www.jetbrains.com/help/ruby/remote-debugging-with-product.html][configuration]]. I'll keep
+the defaults, and use ~/opt/homebrew~ for both *Remote root folder* and *Local
+root folder* since I'm debugging locally.
+
+** debug
+*** Gems
+
+This gem is part of the ruby distribution. The project has its own GitHub
+repository: [[https://github.com/ruby-debug/ruby-debug/issues/32#issuecomment-2447050047][ruby/debug]].
+
+The *brew* project [[https://github.com/Homebrew/brew/pull/18050][supports it now]] and we're able to debug brew commands:
+
+#+begin_src
+  brew debugger tap --force homebrew/core
+#+end_src
+
+Unfortunately, I don't think this debugger is supported by *RubyMine*.
+
+*** Usage
+
+This debugger seems to offer an extensive set of features and I've only tried
+the ~rdbg~ cli and some code breakpoints.
+
+**** CLI
+
+This gem also provides a cli, ~rdbg~, which will drop us into a
+terminal-oriented debugger immediately when provided a program.
+
+#+begin_src shell
+  rdbg program.rb
+#+end_src
+
+**** Code breakpoints
+
+Similar to the python interpreter where we can insert breakpoints with code
+(~breakpoint()~), we can insert breakpoints in Ruby too:
+
+#+begin_src ruby
+  require 'debug'
+  binding.break
+#+end_src
+
+* Conclusion
+
+While I hoped to leverage the more powerful capabilities of RubyMine when
+debugging, I think I will need to opt for a terminal-oriented approach when
+debugging the *brew* command.
+
+I'm not too upset since I had a passion for terminal-oriented debuggers before
+(windbg, gdb, pdb, ..).
