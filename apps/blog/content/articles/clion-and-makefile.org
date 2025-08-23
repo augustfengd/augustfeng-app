@@ -1,0 +1,112 @@
+#+title: Opening the expect project with CLion
+#+date: [2025-08-23 Sat]
+
+* About
+
+I'm opening the [[https://sourceforge.net/projects/expect/][expect]] with CLion, but the editor is not understanding
+correlating the source code file with the project.
+
+So I'm going to take a bit of time to debug this.
+
+* High level debugging
+
+I'm going to create a minimal project in order to get a feel for this feature.
+
+** Multiple programs but only one is a requirement in the default target
+
+This is the makefile in question.
+
+#+begin_src makefile
+all: foobar
+
+foobar: foobar.c
+	gcc $< -o $@
+
+foobaz: foobaz.c
+	gcc $< -o $@
+
+clean:
+	:
+#+end_src
+
+When we configure the *Build Target* to =all=, then /foobar.c/ is detected as
+part of project and /foobaz.c/ is not.
+
+** Multiple programs as requirement in the default target
+
+This is the makefile in question.
+
+#+begin_src makefile
+all: foobar foobar
+
+foobar: foobar.c
+	gcc $< -o $@
+
+foobaz: foobaz.c
+	gcc $< -o $@
+
+clean:
+	:
+#+end_src
+
+Using the same the *Build Target*, now both /foobar.c/ and /foobaz.c/ are part
+of a project now.
+
+** A lib file that is included but not referenced in the makefile
+
+While using the same makefile in as the previous experiment, I created a /lib.c/
+that is not mentioned anywhere in the makefile.
+
+Until I use an ~#include "lib.c"~ in the /foobar.c/ file, the ~lib.c~ is not
+considered to be part of the project.
+
+
+* More precise debugging and conclusion
+
+In the high level debugging experiments, I understood that CLion will consider
+the source code files that build the ~all~ target as part of the project.
+
+Additionally, it's also smart enough to parse the includes and consider them as
+part of the project as well.
+
+The [[https://blog.jetbrains.com/clion/2020/06/makefile-projects-in-clion/][announcement]] that introduced the Makefile integration gives some insight in
+how the integration is implemented: CLion is parsing the output of a ~make~
+command.
+
+In the pre-configuration step, I get green check marks and CLion is correctly
+extrapolating the targets into Run/Debug configurations, yet I have these
+warnings:
+
+#+begin_src
+Couldn't parse command line: 'gcc -DPACKAGE_NAME="expect" -DPACKAGE_TARNAME="expect" -DPACKAGE_VERSION="5.45.3" -DPACKAGE_STRING="expect 5.45.3" -DPACKAGE_BUGREPORT="" -DPACKAGE_URL="" -DBUILD_expect=/**/ -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DHAVE_SYS_TIME_H=1 -DSTDC_HEADERS=1 -DNO_VALUES_H=1 -DHAVE_LIMITS_H=1 -DHAVE_SYS_PARAM_H=1 -DUSE_THREAD_ALLOC=1 -D_REENTRANT=1 -D_THREAD_SAFE=1 -DTCL_THREADS=1 -DMODULE_SCOPE=extern __attribute__((__visibility__("hidden"))) -DTCL_WIDE_INT_IS_LONG=1 -DUSE_TCL_STUBS=1 -DUSE_TCL_STUBS=1 -DHAVE_SYS_SELECT_H=1 -DHAVE_SYS_FCNTL_H=1 -DHAVE_UTIL_H=1 -DRETSIGTYPE=void -DHAVE_SYS_TIME_H=1 -DTIME_WITH_SYS_TIME=1 -DHAVE_STRUCT_TM_TM_ZONE=1 -DHAVE_TM_ZONE=1 -DHAVE_GMTIME_R=1 -DHAVE_LOCALTIME_R=1 -DHAVE_TM_GMTOFF=1 -DHAVE_TIMEZONE_VAR=1 -DHAVE_OPENPTY=1 -DSTTY_READS_STDOUT=1 -DHAVE_MEMMOVE=1 -DHAVE_SYSCONF=1 -DHAVE_STRFTIME=1 -DHAVE_STRCHR=1 -DHAVE_TIMEZONE=1 -DHAVE_SIGLONGJMP=1 -DHAVE_MEMCPY=1 -DWNOHANG_BACKUP_VALUE=1 -DSELECT_MASK_TYPE=fd_set -DHAVE_TCSETATTR=1 -DPOSIX=1 -DHAVE_SGTTYB=1 -DHAVE_TERMIOS=1 -DHAVE_TERMIOS_AND_IOCTL_H_TOGETHER=1 -DSETPGRP_VOID=1 -DHAVE_SV_TIMEZONE=1 -DHAVE_LONG_FILE_NAMES=1 -DTCL_DEBUGGER -DUSE_NON_CONST -DSCRIPTDIR="/opt/homebrew/Cellar/tcl-tk@8/8.6.17/lib/expect5.45.3" -DEXECSCRIPTDIR="/opt/homebrew/Cellar/tcl-tk@8/8.6.17/lib/expect5.45.3" -DSTTY_BIN="/bin/stty" -DDFLT_STTY="sane" -I. -I. -I/opt/homebrew/Cellar/tcl-tk@8/8.6.17/include/tcl-tk -pipe -Os -Wall -fno-common -c  -o exp_command.o' 
+No input file specified
+#+end_src
+
+Since learning that *CLion* is parsing commands, I paid a bit more attention to
+this command and realized there is indeed no input file!
+
+*CLion* is looking for the values passed to the ~-c~ and it's seeing nothing!
+
+I went to go look at the original command:
+
+#+begin_src
+gcc -DPACKAGE_NAME=\"expect\" -DPACKAGE_TARNAME=\"expect\" -DPACKAGE_VERSION=\"5.45.3\" -DPACKAGE_STRING=\"expect\ 5.45.3\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DBUILD_expect=/\*\*/ -DHAVE_STDIO_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_STRINGS_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_UNISTD_H=1 -DHAVE_SYS_TIME_H=1 -DSTDC_HEADERS=1 -DNO_VALUES_H=1 -DHAVE_LIMITS_H=1 -DHAVE_SYS_PARAM_H=1 -DUSE_THREAD_ALLOC=1 -D_REENTRANT=1 -D_THREAD_SAFE=1 -DTCL_THREADS=1 -DMODULE_SCOPE=extern\ __attribute__\(\(__visibility__\(\"hidden\"\)\)\) -DTCL_WIDE_INT_IS_LONG=1 -DUSE_TCL_STUBS=1 -DUSE_TCL_STUBS=1 -DHAVE_SYS_SELECT_H=1 -DHAVE_SYS_FCNTL_H=1 -DHAVE_UTIL_H=1 -DRETSIGTYPE=void -DHAVE_SYS_TIME_H=1 -DTIME_WITH_SYS_TIME=1 -DHAVE_STRUCT_TM_TM_ZONE=1 -DHAVE_TM_ZONE=1 -DHAVE_GMTIME_R=1 -DHAVE_LOCALTIME_R=1 -DHAVE_TM_GMTOFF=1 -DHAVE_TIMEZONE_VAR=1 -DHAVE_OPENPTY=1 -DSTTY_READS_STDOUT=1 -DHAVE_MEMMOVE=1 -DHAVE_SYSCONF=1 -DHAVE_STRFTIME=1 -DHAVE_STRCHR=1 -DHAVE_TIMEZONE=1 -DHAVE_SIGLONGJMP=1 -DHAVE_MEMCPY=1 -DWNOHANG_BACKUP_VALUE=1 -DSELECT_MASK_TYPE=fd_set -DHAVE_TCSETATTR=1 -DPOSIX=1 -DHAVE_SGTTYB=1 -DHAVE_TERMIOS=1 -DHAVE_TERMIOS_AND_IOCTL_H_TOGETHER=1 -DSETPGRP_VOID=1 -DHAVE_SV_TIMEZONE=1 -DHAVE_LONG_FILE_NAMES=1 -DTCL_DEBUGGER -DUSE_NON_CONST -DSCRIPTDIR=\"/opt/homebrew/Cellar/tcl-tk@8/8.6.17/lib/expect5.45.3\" -DEXECSCRIPTDIR=\"/opt/homebrew/Cellar/tcl-tk@8/8.6.17/lib/expect5.45.3\" -DSTTY_BIN=\"/bin/stty\" -DDFLT_STTY="\"sane\"" -I. -I"." -I"/opt/homebrew/Cellar/tcl-tk@8/8.6.17/include/tcl-tk"    -pipe  -Os -Wall -fno-common   -c `echo exp_command.c` -o exp_command.o
+#+end_src
+
+So it seems that the makefile is using command substitutions when resolving the
+input files. This is what the ~Makefile~ looks like:
+
+#+begin_src makefile
+.c.o:
+	$(COMPILE) -c `echo $<` -o $@
+#+end_src
+
+We can help *CLion* by making it static:
+
+#+begin_src makefile
+.c.o:
+	$(COMPILE) -c "$<" -o $@
+#+end_src
+
+/Hint/: The ~Makefile~ is generated by ~Makefile.in~, so modifications were made
+to that latter.
