@@ -1,0 +1,77 @@
+#+title: Coordinate System on MacOS
+#+categories: swift
+#+date: [2025-10-18 Sat]
+
+* About
+
+This is just a random expression of my learning about the coordinate system in
+MacOS.
+
+* Graphics Context
+
+The rendering engine (Quartz 2D) for Mac uses a typical Cartesian coordinate
+system, which means the origin *(0,0)* is at the bottom left corner and the axis
+grow respectively to the left and up.
+
+#+ATTR_HTML: :width 50% :height 50% :class border-2 :alt quartz-coordinates :title quartz coordinates
+[[./quartz_coordinates.gif]]
+
+* SwiftUI's coordinate system
+
+In SwiftUI, you'll most often see a *modified coordinate system* where the
+origin is at the top left and the axis grow to the left and down.
+
+For example, this Path will create a line that starts from the top-left corner
+and moves right by one point, and down by 2 points.
+
+#+begin_src swift
+  Path { path in
+      path.move(to: CGPoint.zero)
+      path.addLine(to: CGPoint(x: 1, y: 2))
+  }
+#+end_src
+
+* AppKit's coordinate system
+
+I was messing around with AppKit, and was really confused when elements were
+being translated in the wrong direction.
+
+So I drew a simple rectangle and learned that AppKit uses the default coordinate
+system from Quartz when the rectangle was drawn at the bottom left corner of the
+window:
+
+#+begin_src swift
+  class RectangleView: NSView {
+      override func draw(_ dirtyRect: NSRect) {
+          super.draw(dirtyRect) // XXX: I'm actually not sure what this does. whatever.
+
+          guard let context = NSGraphicsContext.current?.cgContext else { return }
+
+          let rect = CGRect(
+            x: 0,
+            y: 0,
+            width: 12,
+            height: 24
+          )
+          context.setFillColor(NSColor.black.cgColor)
+          context.fill(rect)
+      }
+  }
+
+
+  struct RectangleViewRepresentable: NSViewRepresentable {
+      func makeNSView(context: Context) -> RectangleView {
+          RectangleView()
+      }
+
+      func updateNSView(_ nsView: RectangleView, context: Context) {}
+  }
+
+  struct ContentView: View {
+      var body: some View {
+          VStack {
+              RectangleViewRepresentable()
+          }
+      }
+  }
+#+end_src

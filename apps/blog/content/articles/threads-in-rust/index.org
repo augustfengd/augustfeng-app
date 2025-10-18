@@ -47,4 +47,4 @@ They're native os threads?!
 
 
 #+ATTR_HTML: :width 100% :height 100% :class border-2 :alt top :title top
-[[./threads-in-rust/top.png]]
+[[./top.png]]
