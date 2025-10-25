@@ -1,0 +1,71 @@
+#+title: Drawing text with Core Graphics
+#+categories: swift
+#+date: [2025-10-24 Fri]
+
+* About
+
+I've learned to draw text with SwiftUI's ~Text~ view.
+
+I've learned to draw text using AppKit and TextKit.
+
+I've also learned to draw text using CoreText.
+
+Is it time to learn to draw text using Core Graphics? Yes.
+
+* Code
+
+I'll just dump the code here for posterity and go walk the dog now.
+
+#+begin_src swift
+import CoreText
+import SwiftUI
+
+class FoobarView: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        let font = CTFont(.system, size: 12, language: nil)
+        let helloworld = Array("foo".utf16)
+        var glyphs = [CGGlyph](repeating: 0, count: helloworld.count)
+        let success = CTFontGetGlyphsForCharacters(
+            font,
+            helloworld,
+            &glyphs,
+            helloworld.count
+        )
+
+        if let context = NSGraphicsContext.current?.cgContext, success {
+            // XXX: On the CGFont, it says that the context won't draw unless this is called.
+            // XXX: https://developer.apple.com/documentation/coregraphics/cgfont/init(_:)-1p4b#Discussion
+            // XXX: It doesn't mention that setFontSize also needs to be called though.
+            let font = CTFontCopyGraphicsFont(font, nil)
+            context.setFont(font)
+            context.setFontSize(12)
+            context.showGlyphs(
+                glyphs,
+                at: [
+                    CGPoint(x: 0, y: 0),
+                    CGPoint(x: 8, y: 0),
+                    CGPoint(x: 16, y: 0),
+                ]
+            )
+        }
+    }
+}
+
+struct FoobarRepresentableView: NSViewRepresentable {
+    func makeNSView(context: Context) -> some NSView {
+        FoobarView()
+    }
+
+    func updateNSView(_ nsView: NSViewType, context: Context) {}
+}
+struct ContentView: View {
+    var body: some View {
+        FoobarRepresentableView()
+            .padding()
+    }
+}
+
+#Preview {
+    ContentView()
+}
+#+end_src
