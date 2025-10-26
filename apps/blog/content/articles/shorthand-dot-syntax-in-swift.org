@@ -1,0 +1,88 @@
+#+title: Shorthand Dot Syntax In Swift
+#+categories: swift
+#+date: [2025-10-26 Sun]
+
+* About
+
+Just dumping some code from a short study done on shorthand dot syntax in Swift.
+I tried three different ways:
+
+- Stored type properties on the method parameter type (struct)
+- Stored type properties on the extension of the method parameter type (struct)
+- Stored type properties and cases on the method parameter type (enum)
+
+* Code
+
+#+begin_src swift
+import SwiftUI
+
+// example 1
+
+extension String {
+    static let helloworld: String = "helloworld"
+}
+
+struct Foobar {
+    func run(helloworld: String) {
+        print(helloworld)
+    }
+}
+
+// example 2
+
+struct Helloworld {
+    let text: String
+
+    static let french: Helloworld = Helloworld(text: "bonjour!")
+    static let english: Helloworld = Helloworld(text: "Hello, World!")
+}
+
+struct Foobaz {
+    func run(helloworld: Helloworld) {
+        print(helloworld.text)
+    }
+}
+
+// example 3
+
+enum Bye {
+    case french(String)
+    case english(String)
+    case other(String)
+    static let mandarin: Bye = Bye.other("再见")
+    static let spanish: String = "adios!"
+}
+
+struct Qux {
+    func run(bye: Bye) {
+
+    }
+}
+
+struct ContentView: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "globe")
+                .imageScale(.large)
+                .foregroundStyle(.tint)
+            Text("Hello, world!")
+        }
+        .padding()
+        .onAppear {
+            // XXX: You can choose stored type properties on an extension.
+            let foobar = Foobar()
+            foobar.run(helloworld: .helloworld)
+
+            // XXX: You can choose stored type properties.
+            let foobaz = Foobaz()
+            foobaz.run(helloworld: .english)
+
+            // XXX: You can choose both case and stored type properties.
+            let qux = Qux()
+            qux.run(bye: .french("adieu."))
+            qux.run(bye: .mandarin)
+            // qux.run(bye: .spanish) // XXX: won't compile because it resolves to a string, but auto-completion offers it.
+        }
+    }
+}
+#+end_src
