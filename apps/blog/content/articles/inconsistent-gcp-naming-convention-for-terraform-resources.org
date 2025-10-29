@@ -1,0 +1,16 @@
+#+title: Inconsistent gcp naming convention for terraform resources
+#+categories: devops
+#+tags[]: terraform
+#+date: [2025-10-29 Wed]
+
+* About
+
+Uh? I've recently had to deploy a load balancer system in GCP, and the terraform
+resource types for the components that make it up use inconsistent naming
+conventions.
+
+I'm drawing a table to illustrate.
+
+* Illustration
+
+{{<inconsistent-gcp-naming-convention-for-terraform-resources>}}

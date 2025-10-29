@@ -1,0 +1,72 @@
+<!-- green means region is qualified -->
+<!-- blue means global is qualified -->
+
+<table border="1">
+  <tr>
+    <td></td>
+    <td><strong>Region qualifier in name</strong></td>
+    <td><strong>Missing qualifier in name</strong></td>
+    <td><strong>Global qualifier in name</strong></td>
+  </tr>
+  <tr>
+      <td><strong>Region resource</strong></td>
+    <!-- region -->
+    <td>
+        <ul>
+            <li>google_compute_region_url_map</li>
+            <li>google_compute_region_target_https_proxy</li>
+            <li>google_compute_region_backend_service</li>
+            <li>google_compute_region_network_endpoint_group</li>
+        </ul>
+    </td>
+    <!-- missing -->
+    <td>
+        <ul>
+            <li>google_compute_forwarding_rule</li>
+            <li>google_compute_address</li>
+        </ul>
+    </td>
+    <!-- global -->
+    <td>
+    </td>
+  </tr>
+  <tr>
+      <td><strong>Zonal resource</strong></td>
+      <!-- region -->
+      <td></td>
+      <!-- missing -->
+      <td>
+          <ul>
+              <li>google_compute_network_endpoint_group</li>
+          </ul>
+
+      </td>
+      <!-- global -->
+      <td>
+      </td>
+  </tr>
+  <tr>
+      <td><strong>Global resource</strong></td>
+    <!-- region -->
+    <td></td>
+    <!-- missing -->
+    <td>
+        <ul>
+            <li>google_compute_managed_ssl_certificate</li>
+            <li>google_compute_url_map</li>
+            <li>google_compute_target_https_proxy</li>
+            <li>google_compute_backend_service</li>
+            <li>google_compute_network_endpoint_group</li>
+        </ul>
+
+    </td>
+    <!-- global -->
+    <td>
+        <ul>
+            <li>google_compute_global_forwarding_rule</li>
+            <li>google_global_compute_address</li>
+            <li>google_compute_global_network_endpoint_group</li>
+        </ul>
+    </td>
+  </tr>
+</table>
